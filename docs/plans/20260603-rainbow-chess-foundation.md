@@ -181,11 +181,13 @@
 ➕ Added during Task 14: a `<footer id="commit-sha">Commit: __COMMIT_SHA__</footer>` (+ small `.app-footer`/`#commit-sha` styles) to `index.html`/`style.css` so the Dockerfile's `sed` `COMMIT_SHA` injection has a real target (mirrors virusgame's footer). Smoke test was run for real: `docker build --build-arg COMMIT_SHA=… .` succeeded, the container served `GET /` (200, SHA injected), `GET /js/app.js` + `/style.css` (200, no-cache headers), `GET /ws` (400 from the gorilla upgrader, proving the WS handler is wired), and the `/app/backend/data` volume dir was created for the SQLite DB. `docker compose config` was validated with `HOSTNAME`/`NETWORK_NAME`/`GIT_SHA` set. `docker-compose.yml` uses GHCR image `ghcr.io/korjavin/rainbow-chess:${GIT_SHA:-latest}` (owner/repo to be confirmed in Task 15 / deploy); the runtime image is alpine with the static binary, no bot-hoster.
 
 ### Task 15: GitHub Actions CI/CD
-- [ ] create `.github/workflows/deploy.yml` adapted from virusgame: job 1 `go test ./...` (+ `node --test` for frontend), job 2 build & push image to `ghcr.io/<owner>/rainbow-chess:${SHA}`, job 3 trigger Portainer redeploy webhook
-- [ ] update the image tag in `docker-compose.yml` from CI (sed/commit pattern as in virusgame), gated on tests passing
-- [ ] validate the workflow YAML parses and references the correct test/build commands and secrets (`PORTAINER_REDEPLOY_HOOK`)
-- [ ] write/adjust a tiny CI smoke step or `Makefile` target (`make test`) wrapping `go test ./...` + `node --test` so CI and local match
-- [ ] run `go test ./...` and `node --test` - must pass before next task
+- [x] create `.github/workflows/deploy.yml` adapted from virusgame: job 1 `go test ./...` (+ `node --test` for frontend), job 2 build & push image to `ghcr.io/<owner>/rainbow-chess:${SHA}`, job 3 trigger Portainer redeploy webhook
+- [x] update the image tag in `docker-compose.yml` from CI (sed/commit pattern as in virusgame), gated on tests passing
+- [x] validate the workflow YAML parses and references the correct test/build commands and secrets (`PORTAINER_REDEPLOY_HOOK`)
+- [x] write/adjust a tiny CI smoke step or `Makefile` target (`make test`) wrapping `go test ./...` + `node --test` so CI and local match
+- [x] run `go test ./...` and `node --test` - must pass before next task
+
+➕ Added during Task 15: three jobs — `test` (sets up Go 1.24 + Node 22 and runs `make test`, i.e. the exact `go test ./...` + `node --test` developers run locally), `build-and-push` (needs `test`, gated off `pull_request`; logs into GHCR, builds the multi-stage image with `COMMIT_SHA` and pushes `:${sha}` + `:latest`, then sed-pins the SHA into `docker-compose.yml` on a force-pushed `deploy` branch), and `deploy` (needs `build-and-push`; fires the `PORTAINER_REDEPLOY_HOOK` webhook). GHCR requires lowercase paths so the image name is computed as `ghcr.io/<lowercased-owner>/rainbow-chess` (the repo owner is mixed-case `Keramag`); the CI sed pattern (`image: ghcr.io/[^/]*/rainbow-chess:.*`) is owner-agnostic so it rewrites the `korjavin` placeholder in the committed compose regardless. Added a root `Makefile` (`test`/`test-backend`/`test-frontend`) as the single CI-and-local entry point. No bot-hoster image/webhook (vs. virusgame's two). YAML validated via `python3 yaml.safe_load` (jobs/needs/secrets/build-args asserted); `make test` green (Go: 2 packages ok, frontend: 54 passing).
 
 ### Task 16: Verify acceptance criteria
 - [ ] verify all Overview requirements are implemented: two registered variants (standard + rainbow), 1v1 challenge w/o lobby, no AI/bot code present, full legal chess for standard, Rainbow symmetry + N/B promotion
