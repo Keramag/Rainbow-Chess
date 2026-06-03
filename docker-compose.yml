@@ -3,8 +3,9 @@
 # specific commit; ${GIT_SHA} defaults to "latest" if unset locally.
 services:
   rainbow-chess:
-    # ghcr.io/<owner>/<repo>:<tag> — set the owner/repo in .env / CI.
-    image: ghcr.io/korjavin/rainbow-chess:${GIT_SHA:-latest}
+    # ghcr.io/<owner>/<repo>:<tag>. Owner = the GitHub repo owner (Keramag,
+    # lowercased for GHCR); CI rewrites this line on the `deploy` branch.
+    image: ghcr.io/keramag/rainbow-chess:${GIT_SHA:-latest}
     container_name: rainbow-chess
     networks:
       - rainbow-chess-network
