@@ -119,12 +119,12 @@
 - [x] run `go test ./...` - must pass before next task
 
 ### Task 8: 1v1 challenge → accept flow
-- [ ] implement `challenge` (target user + chosen `variant`), `challenge_received`, `accept_challenge`, `decline_challenge`, and 30s expiry ticker — adapted from virusgame `hub.go:532-687`, with `variant` added
-- [ ] on accept: validate variant exists, create chess `Game` via `engine.Get(variant).InitialPosition()`, assign colors (challenger = White, acceptor = Black), mark both users in-game, broadcast `game_start` with `{gameId, variant, color, fen, legalMoves}`
-- [ ] reject challenges to busy/offline users and self-challenges
-- [ ] write tests for the full challenge lifecycle (create → received → accept creates game with correct variant & initial FEN)
-- [ ] write tests for expiry, decline, and invalid challenges (offline/busy/self/unknown-variant)
-- [ ] run `go test ./...` - must pass before next task
+- [x] implement `challenge` (target user + chosen `variant`), `challenge_received`, `accept_challenge`, `decline_challenge`, and 30s expiry ticker — adapted from virusgame `hub.go:532-687`, with `variant` added
+- [x] on accept: validate variant exists, create chess `Game` via `engine.Get(variant).InitialPosition()`, assign colors (challenger = White, acceptor = Black), mark both users in-game, broadcast `game_start` with `{gameId, variant, color, fen, legalMoves}`
+- [x] reject challenges to busy/offline users and self-challenges
+- [x] write tests for the full challenge lifecycle (create → received → accept creates game with correct variant & initial FEN)
+- [x] write tests for expiry, decline, and invalid challenges (offline/busy/self/unknown-variant)
+- [x] run `go test ./...` - must pass before next task
 
 ### Task 9: In-game move protocol
 - [ ] implement `move` handler: look up the game's variant, validate the incoming `{from,to,promotion}` against `LegalMoves`, `ApplyMove`, then broadcast `game_update` = `{fen, sideToMove, legalMoves, lastMove, result}` to both players
