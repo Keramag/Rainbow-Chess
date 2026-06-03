@@ -78,11 +78,11 @@
 - [x] run `go test ./...` - must pass before next task
 
 ### Task 3: Pseudo-legal move generation
-- [ ] create `backend/engine/movegen.go`: `PseudoLegalMoves(pos)` per piece — pawn (single push, double push from start rank, diagonal captures, en passant, promotion expansion), knight, bishop/rook/queen (sliding), king (incl. castling king/queen-side with empty-square + not-through/into-check + rights checks)
-- [ ] ensure pawn direction and start/promotion ranks are derived from piece **color** (not board half) so the generator is variant-agnostic
-- [ ] write per-piece move-generation tests from FEN positions (success cases incl. promotion-to-4, en passant, both castles available/blocked)
-- [ ] write edge-case tests (pawn blocked, no double-push when intermediate occupied, castling unavailable when rights lost / path attacked)
-- [ ] run `go test ./...` - must pass before next task
+- [x] create `backend/engine/movegen.go`: `PseudoLegalMoves(pos)` per piece — pawn (single push, double push from start rank, diagonal captures, en passant, promotion expansion), knight, bishop/rook/queen (sliding), king (incl. castling king/queen-side with empty-square + not-through/into-check + rights checks)
+- [x] ensure pawn direction and start/promotion ranks are derived from piece **color** (not board half) so the generator is variant-agnostic
+- [x] write per-piece move-generation tests from FEN positions (success cases incl. promotion-to-4, en passant, both castles available/blocked)
+- [x] write edge-case tests (pawn blocked, no double-push when intermediate occupied, castling unavailable when rights lost / path attacked)
+- [x] run `go test ./...` - must pass before next task
 
 ### Task 4: Legal moves, ApplyMove, and game result
 - [ ] add `LegalMoves(pos)` = pseudo-legal filtered so the mover's king is not left in check (apply-and-test)
