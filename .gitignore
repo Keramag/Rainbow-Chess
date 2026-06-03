@@ -1,0 +1,12 @@
+# Compiled binaries
+backend/rainbow-chess
+backend/rainbow-chess-server
+*.exe
+*.out
+*.bin
+
+# SQLite game database (created at runtime)
+*.db
+*.db-shm
+*.db-wal
+backend/data/

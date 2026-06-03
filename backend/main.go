@@ -21,7 +21,16 @@ func noCacheMiddleware(next http.Handler) http.Handler {
 }
 
 func main() {
+	store, err := OpenStore(databasePath())
+	if err != nil {
+		log.Fatalf("Failed to open game store: %v", err)
+	}
+	defer store.Close()
+
 	hub := newHub()
+	// Wire the Task 9 game-end seam to SQLite persistence: every finished game is
+	// saved asynchronously, off the hub goroutine.
+	hub.gameEnded = func(g *Game) { store.SaveGame(g) }
 	go hub.run()
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {

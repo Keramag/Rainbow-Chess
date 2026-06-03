@@ -137,11 +137,11 @@
 ⚠️ Discovered & fixed during Task 9: the randomized Rainbow `InitialPosition()` could start a game already over. Under symmetric colouring of the standard layout **both kings always start in check** (a structural property), and ~25% of colourings left White (always the side to move) checkmated on move one — surfacing as a flaky `TestChallengeLifecycle_RainbowVariant` ("rainbow game_start has no legal moves"). Fix: the production `InitialPosition()` now re-rolls the colouring until White has ≥1 legal move (a playable start), while `buildInitialPosition` stays the pure single-shot primitive the seeded engine tests assert against. Added `TestRainbowInitialPositionIsPlayable`. The game-end persistence is wired through a `gameEnded func(*Game)` hook field on `Hub` (nil = no-op), which Task 10 will point at `SaveGame`.
 
 ### Task 10: SQLite game persistence
-- [ ] create `backend/storage.go` adapted from virusgame: `games` table (`id, started_at, ended_at, variant, white_name, black_name, result, termination, moves`) where `moves` is the move list (UCI/SAN or FEN history) sufficient to review the game
-- [ ] async save on game end (non-blocking goroutine), DB at `backend/data/games.db`
-- [ ] wire the Task 9 game-end hook to `SaveGame`
-- [ ] write tests for schema init, `SaveGame`, and reading a saved game back (incl. correct variant + result recorded)
-- [ ] run `go test ./...` - must pass before next task
+- [x] create `backend/storage.go` adapted from virusgame: `games` table (`id, started_at, ended_at, variant, white_name, black_name, result, termination, moves`) where `moves` is the move list (UCI/SAN or FEN history) sufficient to review the game
+- [x] async save on game end (non-blocking goroutine), DB at `backend/data/games.db`
+- [x] wire the Task 9 game-end hook to `SaveGame`
+- [x] write tests for schema init, `SaveGame`, and reading a saved game back (incl. correct variant + result recorded)
+- [x] run `go test ./...` - must pass before next task
 
 ### Task 11: Frontend shell, WebSocket client, and challenge UI
 - [ ] create `index.html` + `style.css` adapted from virusgame (header with own username, online-users panel with Challenge buttons + variant picker, incoming-challenge accept/decline prompt, game area placeholder)
