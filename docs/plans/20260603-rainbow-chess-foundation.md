@@ -85,13 +85,13 @@
 - [x] run `go test ./...` - must pass before next task
 
 ### Task 4: Legal moves, ApplyMove, and game result
-- [ ] add `LegalMoves(pos)` = pseudo-legal filtered so the mover's king is not left in check (apply-and-test)
-- [ ] implement `ApplyMove(pos, move)` returning a new `Position`: move piece, handle capture/en-passant/castling rook move/promotion, update castling rights, en-passant target, halfmove & fullmove counters, flip side to move; return error on illegal move
-- [ ] implement `Result(pos)`: no legal moves + in check → checkmate (loser = side to move); no legal moves + not in check → stalemate (draw); else ongoing
-- [ ] write tests for legal-move filtering (pinned pieces, must-block/capture/move-king out of check)
-- [ ] write tests for `ApplyMove` (capture, en-passant capture removes correct pawn, castling moves rook, promotion places chosen piece, rights/clocks updated) + illegal-move error
-- [ ] write checkmate + stalemate tests (e.g., fool's mate, a known stalemate FEN) and `perft(1..3)` count checks on at least the start position and one tactical position
-- [ ] run `go test ./...` - must pass before next task
+- [x] add `LegalMoves(pos)` = pseudo-legal filtered so the mover's king is not left in check (apply-and-test)
+- [x] implement `ApplyMove(pos, move)` returning a new `Position`: move piece, handle capture/en-passant/castling rook move/promotion, update castling rights, en-passant target, halfmove & fullmove counters, flip side to move; return error on illegal move
+- [x] implement `Result(pos)`: no legal moves + in check → checkmate (loser = side to move); no legal moves + not in check → stalemate (draw); else ongoing
+- [x] write tests for legal-move filtering (pinned pieces, must-block/capture/move-king out of check)
+- [x] write tests for `ApplyMove` (capture, en-passant capture removes correct pawn, castling moves rook, promotion places chosen piece, rights/clocks updated) + illegal-move error
+- [x] write checkmate + stalemate tests (e.g., fool's mate, a known stalemate FEN) and `perft(1..3)` count checks on at least the start position and one tactical position
+- [x] run `go test ./...` - must pass before next task
 
 ### Task 5: Variant interface, registry, and Standard variant
 - [ ] create `backend/engine/variant.go`: `Variant` interface (`Name() string`, `InitialPosition() *Position`, `LegalMoves(*Position) []Move`, `ApplyMove(*Position, Move) (*Position, error)`, `Result(*Position) GameResult`, `PromotionPieces() []PieceType`) and a registry (`Register`, `Get(name)`, `List()`)
