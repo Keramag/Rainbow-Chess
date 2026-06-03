@@ -60,6 +60,13 @@ func OpenStore(dbPath string) (*Store, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open db %q: %w", dbPath, err)
 	}
+	// SaveGame fires its INSERT on a fresh goroutine per finished game, so two
+	// games ending close together would otherwise issue concurrent writes to the
+	// same SQLite file and one would fail with SQLITE_BUSY ("database is locked"),
+	// silently dropping that game. Cap the pool at a single connection so
+	// database/sql serializes all access through it — matching SQLite's
+	// single-writer model.
+	db.SetMaxOpenConns(1)
 	if _, err := db.Exec(gamesSchema); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("create schema: %w", err)

@@ -114,7 +114,6 @@ type Game struct {
 	Moves     []string // UCI move history, sufficient to replay the game
 	StartTime time.Time
 	EndTime   time.Time
-	LastMove  time.Time // wall-clock time of the last move, for the turn timer
 
 	MoveTimer *time.Timer // auto-resign timer for the side to move
 }

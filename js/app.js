@@ -247,6 +247,15 @@ if (els.backToMenuBtn) {
   });
 }
 
+// The footer's commit SHA is substituted at image-build time (Dockerfile seds
+// __COMMIT_SHA__). When the server is run straight from the repo (local dev) no
+// substitution happens, so fall back to a "dev" label rather than showing the
+// raw placeholder token.
+const commitEl = $('commit-sha');
+if (commitEl && commitEl.textContent.includes('__COMMIT_SHA__')) {
+  commitEl.textContent = 'Commit: dev';
+}
+
 setStatus(false);
 renderUI();
 client.connect();

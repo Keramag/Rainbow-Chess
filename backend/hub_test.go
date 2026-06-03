@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 	"time"
+
+	"rainbow-chess/engine"
 )
 
 // waitForMessage reads from c.send until it sees a message of the given type or
@@ -140,6 +142,90 @@ func TestHubUsersUpdate_ConnectAndDisconnect(t *testing.T) {
 	// Second client disconnects: c1 should see the roster shrink back to one.
 	h.unregister <- c2
 	waitForUserCount(t, c1, 1)
+}
+
+// TestEvictClient_FullBufferTearsDownUserAndGame verifies that a client whose
+// send buffer is full is not merely dropped from the clients map but fully torn
+// down: its user is removed, its in-progress game ends in the opponent's favor,
+// the opponent is freed, and its send channel is closed. Before the fix, a
+// buffer-full client was deleted from h.clients without running handleDisconnect,
+// so it leaked as a ghost user with an orphaned game (the readPump's later
+// unregister no-ops once the client is gone from the map). This drives the
+// teardown synchronously (no run goroutine) so the assertions are deterministic.
+func TestEvictClient_FullBufferTearsDownUserAndGame(t *testing.T) {
+	h := newHub()
+
+	v, err := engine.Get("standard")
+	if err != nil {
+		t.Fatalf("engine.Get(standard): %v", err)
+	}
+
+	// The stuck client gets a 1-slot send buffer we pre-fill so the next send
+	// overflows; the opponent reads normally with room to spare.
+	stuck := &Client{hub: h, send: make(chan []byte, 1)}
+	stuckUser := &User{ID: "stuck", Username: "Stuck", Client: stuck, InGame: true, GameID: "g1"}
+	stuck.user = stuckUser
+
+	opp := &Client{hub: h, send: make(chan []byte, 8)}
+	oppUser := &User{ID: "opp", Username: "Opp", Client: opp, InGame: true, GameID: "g1"}
+	opp.user = oppUser
+
+	h.clients[stuck] = true
+	h.clients[opp] = true
+	h.users["stuck"] = stuckUser
+	h.users["opp"] = oppUser
+	h.games["g1"] = &Game{
+		ID:       "g1",
+		Variant:  "standard",
+		White:    stuckUser,
+		Black:    oppUser,
+		Position: v.InitialPosition(),
+	}
+
+	stuck.send <- []byte("filler") // buffer (size 1) now full
+
+	// Any send to the stuck client now overflows and must trigger full teardown.
+	h.sendToClient(stuck, &Message{Type: "users_update"})
+
+	if _, ok := h.clients[stuck]; ok {
+		t.Error("evicted client still present in h.clients")
+	}
+	if _, ok := h.users["stuck"]; ok {
+		t.Error("evicted client's user still present in h.users (ghost user leak)")
+	}
+	if _, ok := h.games["g1"]; ok {
+		t.Error("game was not ended/removed after a player was evicted")
+	}
+	if oppUser.InGame || oppUser.GameID != "" {
+		t.Errorf("opponent was not freed: InGame=%v GameID=%q", oppUser.InGame, oppUser.GameID)
+	}
+
+	// The opponent should have been told its opponent disconnected.
+	if !sawMessageType(opp, "opponent_disconnected") {
+		t.Error("opponent did not receive opponent_disconnected")
+	}
+
+	// The evicted client's send channel must be closed (drain the filler first).
+	<-stuck.send
+	if _, ok := <-stuck.send; ok {
+		t.Error("evicted client's send channel was not closed")
+	}
+}
+
+// sawMessageType drains everything currently buffered on a test client's send
+// channel and reports whether any message had the given type.
+func sawMessageType(c *Client, msgType string) bool {
+	for {
+		select {
+		case b := <-c.send:
+			var m Message
+			if err := json.Unmarshal(b, &m); err == nil && m.Type == msgType {
+				return true
+			}
+		default:
+			return false
+		}
+	}
 }
 
 func TestHubDisconnect_UnknownClientIsSafe(t *testing.T) {

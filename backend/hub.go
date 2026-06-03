@@ -313,7 +313,6 @@ func (h *Hub) handleAcceptChallenge(user *User, msg *Message) {
 		Black:     user,
 		Position:  pos,
 		StartTime: time.Now(),
-		LastMove:  time.Now(),
 	}
 	h.games[gameID] = game
 
@@ -433,7 +432,6 @@ func (h *Hub) handleMove(user *User, msg *Message) {
 
 	game.Position = next
 	game.Moves = append(game.Moves, mv.String())
-	game.LastMove = time.Now()
 
 	result := variant.Result(next)
 	lastMove := moveToDTO(mv)
@@ -592,21 +590,43 @@ func (h *Hub) checkExpiredChallenges(now time.Time) {
 }
 
 // broadcast marshals msg once and pushes it to every connected client's send
-// channel, dropping any client whose buffer is full (treated as dead).
+// channel, evicting any client whose buffer is full (treated as dead). Dead
+// clients are collected and torn down after the range so that evictClient's own
+// teardown broadcasts do not mutate the map mid-iteration.
 func (h *Hub) broadcast(msg *Message) {
 	data, err := json.Marshal(msg)
 	if err != nil {
 		log.Printf("Error marshaling broadcast message: %v", err)
 		return
 	}
+	var dead []*Client
 	for client := range h.clients {
 		select {
 		case client.send <- data:
 		default:
-			log.Printf("Failed to broadcast to client, removing from clients map")
-			delete(h.clients, client)
+			dead = append(dead, client)
 		}
 	}
+	for _, client := range dead {
+		log.Printf("Failed to broadcast to client, evicting it")
+		h.evictClient(client)
+	}
+}
+
+// evictClient tears down a client the hub can no longer reach — its send buffer
+// is full, so it is treated as dead. It runs the same teardown as a normal
+// unregister (drop pending challenges, end any game and free the opponent,
+// remove the user) exactly once. The client is removed from the map and its send
+// channel closed *before* handleDisconnect runs so the teardown's own broadcasts
+// skip it and cannot re-enter this path for the same client; the readPump's
+// later unregister then no-ops on the missing map entry.
+func (h *Hub) evictClient(client *Client) {
+	if _, ok := h.clients[client]; !ok {
+		return // already torn down
+	}
+	delete(h.clients, client)
+	close(client.send)
+	h.handleDisconnect(client)
 }
 
 // broadcastUserList sends the current online-users roster to everyone. This is
@@ -640,8 +660,8 @@ func (h *Hub) sendToClient(client *Client, msg *Message) {
 	select {
 	case client.send <- data:
 	default:
-		log.Printf("Failed to send to client, removing from clients map")
-		delete(h.clients, client)
+		log.Printf("Failed to send to client, evicting it")
+		h.evictClient(client)
 	}
 }
 

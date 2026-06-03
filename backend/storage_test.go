@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
@@ -152,6 +153,42 @@ func TestSaveGame_NilUserName(t *testing.T) {
 	}
 	if got.Result != "white_wins" || got.Termination != "opponent disconnected" {
 		t.Errorf("got %s/%s, want white_wins/opponent disconnected", got.Result, got.Termination)
+	}
+}
+
+// TestSaveGame_ConcurrentWrites confirms that many games ending at nearly the
+// same instant are all persisted. SaveGame fires its INSERT on a per-game
+// goroutine, so without DB access serialized to a single connection the
+// concurrent writes would contend for SQLite's write lock and some would be
+// dropped with SQLITE_BUSY. All N games must read back.
+func TestSaveGame_ConcurrentWrites(t *testing.T) {
+	s, _ := openTestStore(t)
+
+	const n = 24
+	dones := make([]<-chan struct{}, n)
+	for i := 0; i < n; i++ {
+		g := &Game{
+			ID:       fmt.Sprintf("game-%02d", i),
+			Variant:  "standard",
+			White:    &User{Username: "W"},
+			Black:    &User{Username: "B"},
+			Result:   engine.GameResult{Outcome: engine.WhiteWins, Reason: "checkmate"},
+			GameOver: true,
+		}
+		dones[i] = s.SaveGame(g) // all launched back-to-back, writes overlap
+	}
+	for _, d := range dones {
+		select {
+		case <-d:
+		case <-time.After(5 * time.Second):
+			t.Fatal("SaveGame did not complete in time")
+		}
+	}
+	for i := 0; i < n; i++ {
+		id := fmt.Sprintf("game-%02d", i)
+		if _, err := s.LoadGame(id); err != nil {
+			t.Errorf("game %q was not persisted: %v", id, err)
+		}
 	}
 }
 
