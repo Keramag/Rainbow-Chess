@@ -102,12 +102,12 @@
 - [x] run `go test ./...` - must pass before next task
 
 ### Task 6: Rainbow variant
-- [ ] create `backend/engine/rainbow.go`: `Rainbow` struct embedding `Standard`, registered as `"rainbow"`
-- [ ] override `InitialPosition()`: place standard piece types on standard squares, then assign colors structured-randomly subject to the symmetry constraint (for every occupied square `(x,y)`, `(7-x,y)` is opposite color); accept an injectable RNG/seed so tests are deterministic; document pawn-direction decision (by color — white toward higher rank) in a code comment
-- [ ] override `PromotionPieces()` = {Knight, Bishop} only
-- [ ] add a `validate()` that asserts the symmetry constraint holds and both kings exist; call it on init
-- [ ] write tests: symmetry invariant holds across many seeds, both kings present, promotion list = {Knight, Bishop} and `ApplyMove` rejects Q/R promotion, initial position passes `validate()`
-- [ ] run `go test ./...` - must pass before next task
+- [x] create `backend/engine/rainbow.go`: `Rainbow` struct embedding `Standard`, registered as `"rainbow"`
+- [x] override `InitialPosition()`: place standard piece types on standard squares, then assign colors structured-randomly subject to the symmetry constraint (for every occupied square `(x,y)`, `(7-x,y)` is opposite color); accept an injectable RNG/seed so tests are deterministic; document pawn-direction decision (by color — white toward higher rank) in a code comment
+- [x] override `PromotionPieces()` = {Knight, Bishop} only
+- [x] add a `validate()` that asserts the symmetry constraint holds and both kings exist; call it on init
+- [x] write tests: symmetry invariant holds across many seeds, both kings present, promotion list = {Knight, Bishop} and `ApplyMove` rejects Q/R promotion, initial position passes `validate()`
+- [x] run `go test ./...` - must pass before next task
 
 ### Task 7: WebSocket hub, client, and anonymous identity
 - [ ] create `backend/main.go`, `backend/client.go`, `backend/names.go` adapted from virusgame (read/write pumps, ping, random `Adjective+Animal+NN` usernames); serve static frontend + `GET /ws`; no-cache middleware for JS/CSS
