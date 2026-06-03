@@ -110,13 +110,13 @@
 - [x] run `go test ./...` - must pass before next task
 
 ### Task 7: WebSocket hub, client, and anonymous identity
-- [ ] create `backend/main.go`, `backend/client.go`, `backend/names.go` adapted from virusgame (read/write pumps, ping, random `Adjective+Animal+NN` usernames); serve static frontend + `GET /ws`; no-cache middleware for JS/CSS
-- [ ] create `backend/hub.go` (single goroutine: `register`/`unregister`/`handleMessage` channels; `users` map) and `backend/types.go` (`User`, chess `Game`, WS `Message`) — **stripped of all lobby/bot/neutral logic**
-- [ ] implement connect (assign username, send `welcome` including the variant list from `engine.List()`) and disconnect cleanup; broadcast `users_update` (online users available to challenge)
-- [ ] initialize `backend/go.mod` with `gorilla/websocket`, `google/uuid`, `modernc.org/sqlite`
-- [ ] write tests for hub connect/disconnect, username assignment, and online-users list updates
-- [ ] write tests for the `welcome` payload containing both registered variants
-- [ ] run `go test ./...` - must pass before next task
+- [x] create `backend/main.go`, `backend/client.go`, `backend/names.go` adapted from virusgame (read/write pumps, ping, random `Adjective+Animal+NN` usernames); serve static frontend + `GET /ws`; no-cache middleware for JS/CSS
+- [x] create `backend/hub.go` (single goroutine: `register`/`unregister`/`handleMessage` channels; `users` map) and `backend/types.go` (`User`, chess `Game`, WS `Message`) — **stripped of all lobby/bot/neutral logic**
+- [x] implement connect (assign username, send `welcome` including the variant list from `engine.List()`) and disconnect cleanup; broadcast `users_update` (online users available to challenge)
+- [x] initialize `backend/go.mod` with `gorilla/websocket`, `google/uuid`, `modernc.org/sqlite`
+- [x] write tests for hub connect/disconnect, username assignment, and online-users list updates
+- [x] write tests for the `welcome` payload containing both registered variants
+- [x] run `go test ./...` - must pass before next task
 
 ### Task 8: 1v1 challenge → accept flow
 - [ ] implement `challenge` (target user + chosen `variant`), `challenge_received`, `accept_challenge`, `decline_challenge`, and 30s expiry ticker — adapted from virusgame `hub.go:532-687`, with `variant` added
