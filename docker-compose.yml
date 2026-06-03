@@ -1,0 +1,31 @@
+# docker-compose.yml — Rainbow Chess behind Traefik.
+# Adapted from ../virusgame. The image tag is rewritten by CI (Task 15) to pin a
+# specific commit; ${GIT_SHA} defaults to "latest" if unset locally.
+services:
+  rainbow-chess:
+    # ghcr.io/<owner>/<repo>:<tag> — set the owner/repo in .env / CI.
+    image: ghcr.io/korjavin/rainbow-chess:${GIT_SHA:-latest}
+    container_name: rainbow-chess
+    networks:
+      - rainbow-chess-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.rainbow-chess.rule=Host(`${HOSTNAME}`)"
+      - "traefik.http.routers.rainbow-chess.entrypoints=websecure"
+      - "traefik.http.routers.rainbow-chess.tls.certresolver=myresolver"
+      # Route to the server's HTTP/WebSocket port.
+      - "traefik.http.services.rainbow-chess.loadbalancer.server.port=8080"
+      # WebSocket upgrade: forward the Connection/Upgrade headers so /ws works.
+      - "traefik.http.middlewares.rainbow-chess-ws.headers.customrequestheaders.Connection=upgrade"
+      - "traefik.http.middlewares.rainbow-chess-ws.headers.customrequestheaders.Upgrade=websocket"
+      - "traefik.http.routers.rainbow-chess.middlewares=rainbow-chess-ws"
+    volumes:
+      # Persist the SQLite game database across container restarts. Matches
+      # databasePath() -> /app/backend/data/games.db inside the container.
+      - ./backend/data:/app/backend/data
+    restart: unless-stopped
+
+networks:
+  rainbow-chess-network:
+    name: ${NETWORK_NAME}
+    external: true

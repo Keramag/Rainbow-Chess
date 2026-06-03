@@ -416,3 +416,16 @@ button.primary {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
   max-width: 320px;
 }
+
+/* Footer: build/commit marker injected at image build time. */
+.app-footer {
+  padding: 14px 22px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+#commit-sha {
+  margin: 0;
+  padding: 0;
+}
