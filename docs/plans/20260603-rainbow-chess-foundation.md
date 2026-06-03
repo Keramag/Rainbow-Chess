@@ -71,11 +71,11 @@
 - [x] run `go test ./...` - must pass before next task
 
 ### Task 2: Square-attack detection
-- [ ] create `backend/engine/attacks.go`: `IsSquareAttacked(pos, sq, byColor)` covering pawn attacks (color-directional), knight, king, and sliding (bishop/rook/queen) attacks with proper blocking
-- [ ] add `KingSquare(pos, color)` and `IsInCheck(pos, color)` helpers built on attack detection
-- [ ] write tests for attack detection from FEN positions (each piece type, blocked vs. open lines, pawn-attack direction per color)
-- [ ] write tests for `IsInCheck` (in-check and not-in-check positions, discovered lines)
-- [ ] run `go test ./...` - must pass before next task
+- [x] create `backend/engine/attacks.go`: `IsSquareAttacked(pos, sq, byColor)` covering pawn attacks (color-directional), knight, king, and sliding (bishop/rook/queen) attacks with proper blocking
+- [x] add `KingSquare(pos, color)` and `IsInCheck(pos, color)` helpers built on attack detection
+- [x] write tests for attack detection from FEN positions (each piece type, blocked vs. open lines, pawn-attack direction per color)
+- [x] write tests for `IsInCheck` (in-check and not-in-check positions, discovered lines)
+- [x] run `go test ./...` - must pass before next task
 
 ### Task 3: Pseudo-legal move generation
 - [ ] create `backend/engine/movegen.go`: `PseudoLegalMoves(pos)` per piece — pawn (single push, double push from start rank, diagonal captures, en passant, promotion expansion), knight, bishop/rook/queen (sliding), king (incl. castling king/queen-side with empty-square + not-through/into-check + rights checks)
