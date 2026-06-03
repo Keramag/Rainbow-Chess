@@ -29,11 +29,14 @@
         <p id="users-empty" class="muted">No one else is online yet. Open a second tab to play.</p>
       </section>
 
-      <!-- Game area placeholder (board rendering arrives in a later task) -->
+      <!-- Game area: chess board + click-to-move (board renderer in chess.js). -->
       <section class="panel game-panel">
         <h2>Game</h2>
         <div id="game-area" class="game-area" hidden>
-          <pre id="game-placeholder" class="game-placeholder"></pre>
+          <div id="board-root" class="board-root"></div>
+          <div class="game-controls">
+            <button id="resign-btn">Resign</button>
+          </div>
         </div>
         <p id="game-idle" class="muted">No active game. Challenge a player to start.</p>
       </section>

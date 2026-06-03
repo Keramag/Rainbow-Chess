@@ -190,15 +190,163 @@ button.primary {
 }
 
 /* Game area */
-.game-placeholder {
-  margin: 0;
-  white-space: pre-wrap;
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
-  font-size: 0.9rem;
-  background: var(--panel-2);
+.game-area {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.board-root {
+  position: relative;
+  display: inline-block;
+}
+
+/* Status banner above the board (turn / check / result). */
+.board-banner {
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 8px 12px;
+  margin-bottom: 10px;
   border-radius: 8px;
-  padding: 14px;
-  color: var(--text);
+  background: var(--panel-2);
+  border-left: 3px solid var(--accent);
+}
+
+.board-banner[data-tone="check"] {
+  border-left-color: var(--accent-2);
+  color: #ffd2e4;
+}
+
+.board-banner[data-tone="over"] {
+  border-left-color: var(--online);
+}
+
+/* The 8x8 grid. A fixed, square aspect so pieces stay centered. */
+.board {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  width: min(70vmin, 520px);
+  aspect-ratio: 1 / 1;
+  border: 3px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  user-select: none;
+}
+
+.square {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* Light / dark squares — neutral so colour-mixed (Rainbow) pieces read clearly
+   regardless of which half they sit in. */
+.square.light {
+  background: #b9c3d6;
+}
+
+.square.dark {
+  background: #5d6b87;
+}
+
+/* A single glyph shape per piece type; the side is conveyed purely by fill
+   colour so Rainbow's colour-mixed boards render each piece by its own colour. */
+.piece {
+  font-size: min(8vmin, 58px);
+  line-height: 1;
+  pointer-events: none;
+}
+
+.piece.white {
+  color: #fbfcff;
+  text-shadow:
+    0 0 1px #1a1d24,
+    0 1px 2px rgba(0, 0, 0, 0.55);
+}
+
+.piece.black {
+  color: #14161c;
+  text-shadow:
+    0 0 1px #cfd6e6,
+    0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+/* Highlights */
+.square.selected {
+  box-shadow: inset 0 0 0 3px var(--accent);
+}
+
+.square.last-move {
+  background-image: linear-gradient(rgba(108, 140, 255, 0.32), rgba(108, 140, 255, 0.32));
+}
+
+.square.in-check {
+  background-image: linear-gradient(rgba(255, 95, 162, 0.55), rgba(255, 95, 162, 0.55));
+}
+
+/* A legal move-to: a dot for an empty square, a ring for a capture. */
+.square.move-target::after {
+  content: "";
+  width: 28%;
+  height: 28%;
+  border-radius: 50%;
+  background: rgba(15, 19, 32, 0.42);
+}
+
+.square.capture-target::after {
+  content: "";
+  position: absolute;
+  inset: 8%;
+  border: 4px solid rgba(15, 19, 32, 0.45);
+  border-radius: 50%;
+}
+
+/* Promotion picker overlay */
+.promotion-picker {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--panel-2);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+  text-align: center;
+  z-index: 5;
+}
+
+.promotion-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.promotion-options {
+  display: flex;
+  gap: 8px;
+}
+
+.promotion-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+}
+
+.promotion-option .piece {
+  font-size: 34px;
+}
+
+.game-controls {
+  display: flex;
+  gap: 10px;
 }
 
 /* Incoming challenge prompt */

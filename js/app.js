@@ -9,6 +9,7 @@
 
 import { MultiplayerClient } from './multiplayer.js';
 import { populateVariantPicker, variantLabel } from './variants.js';
+import { BoardView } from './chess.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -23,16 +24,29 @@ const els = {
   acceptBtn: $('accept-challenge'),
   declineBtn: $('decline-challenge'),
   gameArea: $('game-area'),
-  gamePlaceholder: $('game-placeholder'),
+  boardRoot: $('board-root'),
+  resignBtn: $('resign-btn'),
   gameIdle: $('game-idle'),
   toast: $('toast'),
 };
 
 const client = new MultiplayerClient();
 
+// The board renderer owns all in-game rendering and click-to-move; it relays a
+// completed move back to the server through the client.
+const board = new BoardView(els.boardRoot, {
+  onMove: (from, to, promotion) => {
+    if (client.gameId) client.move(client.gameId, from, to, promotion);
+  },
+});
+
 // Track the most recent incoming challenge so the prompt's Accept/Decline
 // buttons know which one they act on.
 let pendingChallenge = null;
+
+// Best-effort opponent name for the in-game banner: remembered when we send a
+// challenge (we know the target) or accept one (we know the challenger).
+let opponentName = '';
 
 // --- Rendering ------------------------------------------------------------
 
@@ -67,6 +81,7 @@ function renderUsers() {
       btn.textContent = 'Challenge';
       btn.addEventListener('click', () => {
         const variant = els.variantPicker ? els.variantPicker.value : 'standard';
+        opponentName = user.username;
         client.challenge(user.userId, variant);
         toast(`Challenge sent to ${user.username} (${variantLabel(variant)})`);
       });
@@ -94,10 +109,8 @@ function hideChallengePrompt() {
 function showGame(msg) {
   if (els.gameArea) els.gameArea.hidden = false;
   if (els.gameIdle) els.gameIdle.hidden = true;
-  if (els.gamePlaceholder) {
-    els.gamePlaceholder.textContent =
-      `${variantLabel(msg.variant)} — you are ${msg.color}.\nFEN: ${msg.fen}`;
-  }
+  if (els.resignBtn) els.resignBtn.disabled = false;
+  board.start(msg, opponentName);
 }
 
 function endGame() {
@@ -106,15 +119,13 @@ function endGame() {
 }
 
 function updateGame(msg) {
-  if (!els.gamePlaceholder) return;
-  let text = `FEN: ${msg.fen}\nTo move: ${msg.sideToMove || '—'}`;
+  board.update(msg);
   if (msg.result && msg.result.outcome && msg.result.outcome !== 'ongoing') {
-    text += `\nGame over: ${msg.result.outcome} (${msg.result.reason || ''})`;
-    // The client clears its game state on a terminal result; mirror that here
-    // after a short beat so players can read the final position.
-    setTimeout(endGame, 3000);
+    if (els.resignBtn) els.resignBtn.disabled = true;
+    // The board keeps the final position on screen; clear the game area after a
+    // short beat so players can read the result before returning to the menu.
+    setTimeout(endGame, 5000);
   }
-  els.gamePlaceholder.textContent = text;
 }
 
 let toastTimer = null;
@@ -149,13 +160,24 @@ client
     showGame(msg);
   })
   .on('game_update', (msg) => updateGame(msg))
-  .on('opponent_disconnected', () => toast('Opponent disconnected — you win.'))
+  .on('opponent_disconnected', () => {
+    toast('Opponent disconnected — you win.');
+    setTimeout(endGame, 5000);
+  })
   .on('error', (msg) => toast(msg.message || 'Error'));
 
 if (els.acceptBtn) {
   els.acceptBtn.addEventListener('click', () => {
-    if (pendingChallenge) client.acceptChallenge(pendingChallenge.challengeId);
+    if (pendingChallenge) {
+      opponentName = pendingChallenge.fromUsername || '';
+      client.acceptChallenge(pendingChallenge.challengeId);
+    }
     hideChallengePrompt();
+  });
+}
+if (els.resignBtn) {
+  els.resignBtn.addEventListener('click', () => {
+    if (client.gameId) client.resign(client.gameId);
   });
 }
 if (els.declineBtn) {

@@ -322,6 +322,7 @@ func (h *Hub) handleAcceptChallenge(user *User, msg *Message) {
 
 	fen := pos.FEN()
 	legal := movesToDTO(variant.LegalMoves(pos))
+	inCheck := engine.IsInCheck(pos, pos.SideToMove)
 
 	h.sendToUser(from, &Message{
 		Type:       "game_start",
@@ -329,6 +330,8 @@ func (h *Hub) handleAcceptChallenge(user *User, msg *Message) {
 		Variant:    challenge.Variant,
 		Color:      "white",
 		FEN:        fen,
+		SideToMove: pos.SideToMove.String(),
+		InCheck:    inCheck,
 		LegalMoves: legal,
 	})
 	h.sendToUser(user, &Message{
@@ -337,6 +340,8 @@ func (h *Hub) handleAcceptChallenge(user *User, msg *Message) {
 		Variant:    challenge.Variant,
 		Color:      "black",
 		FEN:        fen,
+		SideToMove: pos.SideToMove.String(),
+		InCheck:    inCheck,
 		LegalMoves: legal,
 	})
 
@@ -437,6 +442,7 @@ func (h *Hub) handleMove(user *User, msg *Message) {
 		GameID:     game.ID,
 		FEN:        next.FEN(),
 		SideToMove: next.SideToMove.String(),
+		InCheck:    engine.IsInCheck(next, next.SideToMove),
 		LegalMoves: movesToDTO(variant.LegalMoves(next)),
 		LastMove:   &lastMove,
 		Result:     resultToDTO(result),

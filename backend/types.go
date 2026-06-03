@@ -42,6 +42,7 @@ type Message struct {
 	Color      string     `json:"color,omitempty"` // recipient's color: "white"/"black"
 	FEN        string     `json:"fen,omitempty"`
 	SideToMove string     `json:"sideToMove,omitempty"`
+	InCheck    bool       `json:"inCheck,omitempty"` // is the side to move currently in check
 	LegalMoves []MoveDTO  `json:"legalMoves,omitempty"`
 	Move       *MoveDTO   `json:"move,omitempty"`     // move (client -> server)
 	LastMove   *MoveDTO   `json:"lastMove,omitempty"` // last move played (server -> client)

@@ -154,11 +154,13 @@
 ➕ Added during Task 11: `js/app.js` (the thin DOM-glue entry loaded by `index.html`'s `<script type="module">` — keeps `multiplayer.js`/`variants.js` pure & unit-testable) and a root `package.json` with `"type": "module"` + `"test": "node --test"` so Node treats the `.js` modules as ESM and the frontend suite runs the same way locally and in CI. `MultiplayerClient.handleMessage` is a DOM-free state-updater + handler dispatcher (handlers registered via `on()`), which is what the routing tests drive. `game_update` with a terminal `result` clears the client's current-game state. Frontend tests: 19 passing.
 
 ### Task 12: Chess board rendering and click-to-move
-- [ ] create `js/board-model.js` (ES module, pure): FEN→8×8 model, square↔pixel/coordinate mapping, and derivation of highlight targets from the server-provided legal-move list
-- [ ] create `js/chess.js` (ES module): render the board from `fen` with color-correct Unicode/SVG pieces, click source→target (with a promotion picker limited to the variant's allowed pieces), send `move`, re-render on `game_update`, and show turn / check / game-over banners
-- [ ] handle Rainbow correctly: render each piece by its own color (positions are color-mixed), no assumption that bottom = white
-- [ ] write `node --test` tests for `board-model.js` (FEN→model for start + a Rainbow-style mixed position, coordinate mapping, highlight derivation)
-- [ ] run `node --test` (frontend) and `go test ./...` - must pass before next task
+- [x] create `js/board-model.js` (ES module, pure): FEN→8×8 model, square↔pixel/coordinate mapping, and derivation of highlight targets from the server-provided legal-move list
+- [x] create `js/chess.js` (ES module): render the board from `fen` with color-correct Unicode/SVG pieces, click source→target (with a promotion picker limited to the variant's allowed pieces), send `move`, re-render on `game_update`, and show turn / check / game-over banners
+- [x] handle Rainbow correctly: render each piece by its own color (positions are color-mixed), no assumption that bottom = white
+- [x] write `node --test` tests for `board-model.js` (FEN→model for start + a Rainbow-style mixed position, coordinate mapping, highlight derivation)
+- [x] run `node --test` (frontend) and `go test ./...` - must pass before next task
+
+➕ Added during Task 12: a server-side `inCheck` flag on `game_start`/`game_update` (`Message.InCheck`, derived from `engine.IsInCheck`) so the client's check banner stays rule-free — the frontend never re-implements chess logic. The promotion picker reads its allowed pieces straight from the legal-move list (Standard surfaces Q/R/B/N, Rainbow only N/B), so no separate variant lookup is needed on the client. `BoardView` (chess.js) is the DOM renderer; all derivations live in the pure, unit-tested `board-model.js`. `index.html` now hosts a `#board-root` + Resign button; `app.js` drives the board on `game_start`/`game_update` and remembers the opponent name for the banner. Frontend tests: 35 passing (16 new for board-model).
 
 ### Task 13: End-to-end game wiring + variant selection
 - [ ] connect challenge picker → `game_start` → board render → moves → `game_update` → game-over, so a full game is playable between two browser tabs for BOTH variants
