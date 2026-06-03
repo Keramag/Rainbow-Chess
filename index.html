@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rainbow Chess</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <h1 class="app-title">🌈 Rainbow Chess</h1>
+      <div class="identity">
+        <span class="you">You: <strong id="own-username">…</strong></span>
+        <span id="connection-status" class="status offline">Disconnected</span>
+      </div>
+    </header>
+
+    <main class="layout">
+      <!-- Online users + challenge controls -->
+      <section class="panel users-panel">
+        <div class="panel-head">
+          <h2>Players online</h2>
+          <label class="variant-pick">
+            Variant
+            <select id="variant-picker"></select>
+          </label>
+        </div>
+        <ul id="users-list" class="users-list"></ul>
+        <p id="users-empty" class="muted">No one else is online yet. Open a second tab to play.</p>
+      </section>
+
+      <!-- Game area placeholder (board rendering arrives in a later task) -->
+      <section class="panel game-panel">
+        <h2>Game</h2>
+        <div id="game-area" class="game-area" hidden>
+          <pre id="game-placeholder" class="game-placeholder"></pre>
+        </div>
+        <p id="game-idle" class="muted">No active game. Challenge a player to start.</p>
+      </section>
+    </main>
+
+    <!-- Incoming challenge prompt -->
+    <div id="challenge-prompt" class="challenge-prompt" hidden>
+      <p id="challenge-text"></p>
+      <div class="challenge-actions">
+        <button id="accept-challenge" class="primary">Accept</button>
+        <button id="decline-challenge">Decline</button>
+      </div>
+    </div>
+
+    <!-- Transient notifications -->
+    <div id="toast" class="toast" hidden></div>
+
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>

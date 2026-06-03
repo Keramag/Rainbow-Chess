@@ -144,12 +144,14 @@
 - [x] run `go test ./...` - must pass before next task
 
 ### Task 11: Frontend shell, WebSocket client, and challenge UI
-- [ ] create `index.html` + `style.css` adapted from virusgame (header with own username, online-users panel with Challenge buttons + variant picker, incoming-challenge accept/decline prompt, game area placeholder)
-- [ ] create `js/multiplayer.js` (ES module): `MultiplayerClient` adapted from virusgame — `connect`, `send`, and `handleMessage` dispatch for `welcome`/`users_update`/`challenge_received`/`game_start`/`game_update`/`error`
-- [ ] create `js/variants.js` (ES module): parse the variant list from `welcome` and populate the challenge variant picker
-- [ ] wire the static files to be served by the Go server (Task 7) and loaded via `<script type="module">`
-- [ ] write `node --test` tests for the variant-list parser and the message-dispatch routing (pure logic, DOM-free)
-- [ ] run `node --test` (frontend) and `go test ./...` - must pass before next task
+- [x] create `index.html` + `style.css` adapted from virusgame (header with own username, online-users panel with Challenge buttons + variant picker, incoming-challenge accept/decline prompt, game area placeholder)
+- [x] create `js/multiplayer.js` (ES module): `MultiplayerClient` adapted from virusgame — `connect`, `send`, and `handleMessage` dispatch for `welcome`/`users_update`/`challenge_received`/`game_start`/`game_update`/`error`
+- [x] create `js/variants.js` (ES module): parse the variant list from `welcome` and populate the challenge variant picker
+- [x] wire the static files to be served by the Go server (Task 7) and loaded via `<script type="module">`
+- [x] write `node --test` tests for the variant-list parser and the message-dispatch routing (pure logic, DOM-free)
+- [x] run `node --test` (frontend) and `go test ./...` - must pass before next task
+
+➕ Added during Task 11: `js/app.js` (the thin DOM-glue entry loaded by `index.html`'s `<script type="module">` — keeps `multiplayer.js`/`variants.js` pure & unit-testable) and a root `package.json` with `"type": "module"` + `"test": "node --test"` so Node treats the `.js` modules as ESM and the frontend suite runs the same way locally and in CI. `MultiplayerClient.handleMessage` is a DOM-free state-updater + handler dispatcher (handlers registered via `on()`), which is what the routing tests drive. `game_update` with a terminal `result` clears the client's current-game state. Frontend tests: 19 passing.
 
 ### Task 12: Chess board rendering and click-to-move
 - [ ] create `js/board-model.js` (ES module, pure): FEN→8×8 model, square↔pixel/coordinate mapping, and derivation of highlight targets from the server-provided legal-move list

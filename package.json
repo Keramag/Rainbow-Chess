@@ -1,0 +1,10 @@
+{
+  "name": "rainbow-chess-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Vanilla-JS frontend for Rainbow Chess (ES modules, no build step).",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  }
+}
