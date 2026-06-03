@@ -214,6 +214,45 @@ test('opponent_disconnected with no game still surfaces a notice without crashin
   assert.equal(s.notice.kind, 'opponent_disconnected');
 });
 
+test('connection_lost mid-game ends the game as a loss and surfaces a notice', () => {
+  let s = reduce(initialState(), {
+    type: 'game_start',
+    gameId: 'g1',
+    variant: 'standard',
+    color: 'white',
+    fen: START_FEN,
+  });
+  s = reduce(s, { type: 'connection_lost' });
+
+  assert.equal(s.phase, PHASE.OVER);
+  assert.equal(s.game.result.outcome, 'black_wins', 'our own disconnect awards the win to the opponent');
+  assert.equal(s.game.result.reason, 'connection lost');
+  assert.equal(playerOutcome(s.game.result, s.game.myColor), 'loss');
+  assert.equal(s.notice.kind, 'connection_lost');
+});
+
+test('connection_lost outside a live game only surfaces a notice', () => {
+  // On the menu: nothing to end.
+  const onMenu = reduce(initialState(), { type: 'connection_lost' });
+  assert.equal(onMenu.phase, PHASE.MENU);
+  assert.equal(onMenu.game, null);
+  assert.equal(onMenu.notice.kind, 'connection_lost');
+
+  // A game that already finished keeps its real result; we only note the drop.
+  let over = reduce(initialState(), {
+    type: 'game_start',
+    gameId: 'g1',
+    variant: 'standard',
+    color: 'white',
+    fen: START_FEN,
+  });
+  over = reduce(over, { type: 'game_update', gameId: 'g1', result: { outcome: 'white_wins', reason: 'checkmate' } });
+  const dropped = reduce(over, { type: 'connection_lost' });
+  assert.equal(dropped.phase, PHASE.OVER);
+  assert.equal(dropped.game.result.reason, 'checkmate', 'the finished result is preserved, not overwritten');
+  assert.equal(dropped.notice.kind, 'connection_lost');
+});
+
 test('playerOutcome maps results to the viewing player perspective', () => {
   assert.equal(playerOutcome(null, 'white'), null);
   assert.equal(playerOutcome({ outcome: 'ongoing' }, 'white'), null);

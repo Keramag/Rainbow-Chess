@@ -135,6 +135,91 @@ func TestChallengeLifecycle_RainbowVariant(t *testing.T) {
 	}
 }
 
+// TestChallengeAccept_GameStartCarriesOpponentName asserts each game_start names
+// the other player: the challenger sees the acceptor, and vice versa. The client
+// renders the in-game header from this rather than from a remembered name.
+func TestChallengeAccept_GameStartCarriesOpponentName(t *testing.T) {
+	h := newHub()
+	go h.run()
+
+	c1 := newTestClient(h)
+	h.register <- c1
+	w1 := waitForMessage(t, c1, "welcome")
+	c2 := newTestClient(h)
+	h.register <- c2
+	w2 := waitForMessage(t, c2, "welcome")
+	if w1 == nil || w2 == nil {
+		return
+	}
+
+	send(h, c1, &Message{Type: "challenge", TargetUserID: w2.UserID, Variant: "standard"})
+	recv := waitForMessage(t, c2, "challenge_received")
+	if recv == nil {
+		return
+	}
+	send(h, c2, &Message{Type: "accept_challenge", ChallengeID: recv.ChallengeID})
+
+	white := waitForMessage(t, c1, "game_start")
+	black := waitForMessage(t, c2, "game_start")
+	if white == nil || black == nil {
+		return
+	}
+	if white.OpponentName != w2.Username {
+		t.Errorf("challenger game_start opponentName = %q, want %q (the acceptor)", white.OpponentName, w2.Username)
+	}
+	if black.OpponentName != w1.Username {
+		t.Errorf("acceptor game_start opponentName = %q, want %q (the challenger)", black.OpponentName, w1.Username)
+	}
+}
+
+// TestChallengeAccept_OpponentNameWithMultipleOutgoing reproduces the case the
+// client used to get wrong: one user issues challenges to two different targets
+// (the server permits this — it only blocks duplicate challenges to the *same*
+// target), and whichever accepts first must be named as the opponent. Because
+// game_start now carries the opponent name from the server, the first acceptor is
+// reported correctly regardless of which challenge was issued last.
+func TestChallengeAccept_OpponentNameWithMultipleOutgoing(t *testing.T) {
+	h := newHub()
+	go h.run()
+
+	c1 := newTestClient(h) // challenger
+	h.register <- c1
+	w1 := waitForMessage(t, c1, "welcome")
+	cA := newTestClient(h) // target A
+	h.register <- cA
+	wA := waitForMessage(t, cA, "welcome")
+	cB := newTestClient(h) // target B
+	h.register <- cB
+	wB := waitForMessage(t, cB, "welcome")
+	if w1 == nil || wA == nil || wB == nil {
+		return
+	}
+
+	// c1 challenges A, then B; both are pending simultaneously.
+	send(h, c1, &Message{Type: "challenge", TargetUserID: wA.UserID, Variant: "standard"})
+	recvA := waitForMessage(t, cA, "challenge_received")
+	send(h, c1, &Message{Type: "challenge", TargetUserID: wB.UserID, Variant: "standard"})
+	recvB := waitForMessage(t, cB, "challenge_received")
+	if recvA == nil || recvB == nil {
+		return
+	}
+
+	// A (the earlier-issued challenge) accepts first. The challenger's game_start
+	// must name A, even though B was challenged most recently.
+	send(h, cA, &Message{Type: "accept_challenge", ChallengeID: recvA.ChallengeID})
+	white := waitForMessage(t, c1, "game_start")
+	black := waitForMessage(t, cA, "game_start")
+	if white == nil || black == nil {
+		return
+	}
+	if white.OpponentName != wA.Username {
+		t.Errorf("challenger game_start opponentName = %q, want %q (A, who accepted)", white.OpponentName, wA.Username)
+	}
+	if black.OpponentName != w1.Username {
+		t.Errorf("acceptor game_start opponentName = %q, want challenger %q", black.OpponentName, w1.Username)
+	}
+}
+
 // TestChallengeExpiry verifies a challenge left unanswered past the TTL expires
 // and both parties are notified.
 func TestChallengeExpiry(t *testing.T) {

@@ -323,25 +323,30 @@ func (h *Hub) handleAcceptChallenge(user *User, msg *Message) {
 	legal := movesToDTO(variant.LegalMoves(pos))
 	inCheck := engine.IsInCheck(pos, pos.SideToMove)
 
+	// game_start carries the opponent's username so the client never has to
+	// remember whom it challenged/accepted — which would be ambiguous when a user
+	// has several outgoing challenges pending and any of them might accept first.
 	h.sendToUser(from, &Message{
-		Type:       "game_start",
-		GameID:     gameID,
-		Variant:    challenge.Variant,
-		Color:      "white",
-		FEN:        fen,
-		SideToMove: pos.SideToMove.String(),
-		InCheck:    inCheck,
-		LegalMoves: legal,
+		Type:         "game_start",
+		GameID:       gameID,
+		Variant:      challenge.Variant,
+		Color:        "white",
+		OpponentName: user.Username,
+		FEN:          fen,
+		SideToMove:   pos.SideToMove.String(),
+		InCheck:      inCheck,
+		LegalMoves:   legal,
 	})
 	h.sendToUser(user, &Message{
-		Type:       "game_start",
-		GameID:     gameID,
-		Variant:    challenge.Variant,
-		Color:      "black",
-		FEN:        fen,
-		SideToMove: pos.SideToMove.String(),
-		InCheck:    inCheck,
-		LegalMoves: legal,
+		Type:         "game_start",
+		GameID:       gameID,
+		Variant:      challenge.Variant,
+		Color:        "black",
+		OpponentName: from.Username,
+		FEN:          fen,
+		SideToMove:   pos.SideToMove.String(),
+		InCheck:      inCheck,
+		LegalMoves:   legal,
 	})
 
 	h.broadcastUserList()

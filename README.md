@@ -190,7 +190,7 @@ Server → client:
 `users_update {users[]}`,
 `challenge_received {challengeId, fromUserId, fromUsername, variant}`,
 `challenge_declined`, `challenge_expired`,
-`game_start {gameId, variant, color, fen, sideToMove, inCheck, legalMoves}`,
+`game_start {gameId, variant, color, opponentName, fen, sideToMove, inCheck, legalMoves}`,
 `game_update {gameId, fen, sideToMove, inCheck, legalMoves, lastMove, result}`,
 `opponent_disconnected`, `error {message}`.
 

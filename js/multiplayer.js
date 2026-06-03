@@ -95,6 +95,17 @@ export class MultiplayerClient {
     if (this.ws) this.ws.close();
   }
 
+  // clearGame drops the current game context. The server ends any game the
+  // moment a player's socket drops and supports no rejoin (a reconnect comes
+  // back as a brand-new anonymous user), so when our own connection is lost the
+  // in-flight game is gone. Clearing it here also neutralises the move/resign
+  // senders in app.js, which are guarded on a live gameId.
+  clearGame() {
+    this.gameId = null;
+    this.color = null;
+    this.variant = null;
+  }
+
   // receive parses a raw frame (possibly several newline-separated JSON messages,
   // as the Go server may coalesce) and dispatches each. Malformed lines are
   // logged and skipped rather than throwing.

@@ -60,10 +60,6 @@ const board = new BoardView(els.boardRoot, {
 // buttons know which one they act on.
 let pendingChallenge = null;
 
-// Best-effort opponent name for the in-game banner: remembered when we send a
-// challenge (we know the target) or accept one (we know the challenger).
-let opponentName = '';
-
 // --- Rendering ------------------------------------------------------------
 
 function setStatus(connected) {
@@ -97,7 +93,6 @@ function renderUsers() {
       btn.textContent = 'Challenge';
       btn.addEventListener('click', () => {
         const variant = els.variantPicker ? els.variantPicker.value : 'standard';
-        opponentName = user.username;
         client.challenge(user.userId, variant);
         toast(`Challenge sent to ${user.username} (${variantLabel(variant)})`);
       });
@@ -143,7 +138,7 @@ function renderUI() {
 
 // renderGameInfo shows the active variant and both players with their colors,
 // marking which side is "you". client.username is known by game_start (welcome
-// always arrives first); opponentName is remembered when we issue/accept.
+// always arrives first); the opponent's name rides on game_start itself.
 function renderGameInfo() {
   if (!els.gameInfo) return;
   const g = ui.game;
@@ -191,7 +186,18 @@ function toast(message) {
 
 client
   .on('open', () => setStatus(true))
-  .on('close', () => setStatus(false))
+  .on('close', () => {
+    setStatus(false);
+    // The server tears any game down on disconnect and supports no rejoin, so a
+    // game we were in is unrecoverable once our socket drops. End it locally:
+    // clear the client's game context (which also disables the now-stale
+    // move/resign sends) and fold the loss into the screen state, mirroring it
+    // onto the board so nothing keeps reading "your move".
+    if (!client.gameId) return;
+    client.clearGame();
+    dispatch({ type: 'connection_lost' });
+    if (ui.game && ui.game.result) board.update({ result: ui.game.result });
+  })
   .on('welcome', (msg) => {
     if (els.username) els.username.textContent = msg.username;
     populateVariantPicker(els.variantPicker, msg.variants);
@@ -205,10 +211,11 @@ client
   })
   .on('game_start', (msg) => {
     hideChallengePrompt();
-    // The board renderer needs the raw message + the opponent name; the reducer
-    // tracks the surrounding screen state (and the same opponent name).
-    board.start(msg, opponentName);
-    dispatch({ ...msg, opponentName });
+    // The opponent name is server-authoritative (it rides on game_start), so the
+    // board renderer and the reducer both read it straight off the message — no
+    // client-side guessing that could mix up concurrent outgoing challenges.
+    board.start(msg, msg.opponentName || '');
+    dispatch(msg);
   })
   .on('game_update', (msg) => {
     board.update(msg);
@@ -219,10 +226,7 @@ client
 
 if (els.acceptBtn) {
   els.acceptBtn.addEventListener('click', () => {
-    if (pendingChallenge) {
-      opponentName = pendingChallenge.fromUsername || '';
-      client.acceptChallenge(pendingChallenge.challengeId);
-    }
+    if (pendingChallenge) client.acceptChallenge(pendingChallenge.challengeId);
     hideChallengePrompt();
   });
 }
@@ -242,7 +246,6 @@ if (els.backToMenuBtn) {
   // lobby-less menu, where the player can issue or accept a fresh challenge.
   els.backToMenuBtn.addEventListener('click', () => {
     ui = returnToMenu(ui);
-    opponentName = '';
     renderUI();
   });
 }

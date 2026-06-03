@@ -109,6 +109,20 @@ export function reduce(state, msg) {
       return { phase: PHASE.OVER, game: { ...state.game, result }, notice };
     }
 
+    case 'connection_lost': {
+      // Our own socket dropped. The server scores any disconnect as a loss for
+      // the dropped side and supports no rejoin, so a game in flight is gone —
+      // reflect that and move to the terminal screen. Outside a live game there
+      // is nothing to end (a finished game keeps its real result); just note it.
+      const notice = { kind: 'connection_lost', text: 'Connection lost — game ended.' };
+      if (!state.game || state.phase !== PHASE.PLAYING) {
+        return { ...state, notice };
+      }
+      const oppColor = state.game.myColor === 'white' ? 'black' : 'white';
+      const result = { outcome: winFor(oppColor), reason: 'connection lost' };
+      return { phase: PHASE.OVER, game: { ...state.game, result }, notice };
+    }
+
     case 'challenge_declined':
       return { ...state, notice: { kind: 'challenge_declined', text: 'Your challenge was declined.' } };
 

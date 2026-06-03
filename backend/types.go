@@ -38,8 +38,10 @@ type Message struct {
 	Variant      string `json:"variant,omitempty"`
 
 	// Game state.
-	GameID     string     `json:"gameId,omitempty"`
-	Color      string     `json:"color,omitempty"` // recipient's color: "white"/"black"
+	GameID       string `json:"gameId,omitempty"`
+	Color        string `json:"color,omitempty"`        // recipient's color: "white"/"black"
+	OpponentName string `json:"opponentName,omitempty"` // game_start: the other player's username
+
 	FEN        string     `json:"fen,omitempty"`
 	SideToMove string     `json:"sideToMove,omitempty"`
 	InCheck    bool       `json:"inCheck,omitempty"` // is the side to move currently in check

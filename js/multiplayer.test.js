@@ -102,6 +102,17 @@ test('opponent_disconnected clears the current game', () => {
   assert.equal(seen.opponent_disconnected, msg);
 });
 
+test('clearGame drops the current game context (used when our own socket drops)', () => {
+  const client = new MultiplayerClient();
+  client.handleMessage({ type: 'game_start', gameId: 'g1', variant: 'standard', color: 'white' });
+  assert.equal(client.gameId, 'g1');
+
+  client.clearGame();
+  assert.equal(client.gameId, null, 'gameId cleared so stale move/resign sends are suppressed');
+  assert.equal(client.color, null);
+  assert.equal(client.variant, null);
+});
+
 test('challenge / error messages route without mutating game state', () => {
   const { client, seen } = recordingClient();
   const received = { type: 'challenge_received', challengeId: 'c1', fromUsername: 'Alice', variant: 'rainbow' };
