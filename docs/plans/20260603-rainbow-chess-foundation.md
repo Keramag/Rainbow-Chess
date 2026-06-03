@@ -94,12 +94,12 @@
 - [x] run `go test ./...` - must pass before next task
 
 ### Task 5: Variant interface, registry, and Standard variant
-- [ ] create `backend/engine/variant.go`: `Variant` interface (`Name() string`, `InitialPosition() *Position`, `LegalMoves(*Position) []Move`, `ApplyMove(*Position, Move) (*Position, error)`, `Result(*Position) GameResult`, `PromotionPieces() []PieceType`) and a registry (`Register`, `Get(name)`, `List()`)
-- [ ] create `backend/engine/standard.go`: `Standard` struct implementing the interface — standard initial position, `LegalMoves`/`ApplyMove`/`Result` delegating to the engine, `PromotionPieces()` = {Queen, Rook, Bishop, Knight}; register as `"standard"`
-- [ ] ensure `ApplyMove` rejects promotions to a piece not in the variant's `PromotionPieces()`
-- [ ] write tests for the registry (register/get/list, unknown-name error)
-- [ ] write tests for the Standard variant (correct initial position/FEN, a short legal game sequence, promotion to all four allowed)
-- [ ] run `go test ./...` - must pass before next task
+- [x] create `backend/engine/variant.go`: `Variant` interface (`Name() string`, `InitialPosition() *Position`, `LegalMoves(*Position) []Move`, `ApplyMove(*Position, Move) (*Position, error)`, `Result(*Position) GameResult`, `PromotionPieces() []PieceType`) and a registry (`Register`, `Get(name)`, `List()`)
+- [x] create `backend/engine/standard.go`: `Standard` struct implementing the interface — standard initial position, `LegalMoves`/`ApplyMove`/`Result` delegating to the engine, `PromotionPieces()` = {Queen, Rook, Bishop, Knight}; register as `"standard"`
+- [x] ensure `ApplyMove` rejects promotions to a piece not in the variant's `PromotionPieces()`
+- [x] write tests for the registry (register/get/list, unknown-name error)
+- [x] write tests for the Standard variant (correct initial position/FEN, a short legal game sequence, promotion to all four allowed)
+- [x] run `go test ./...` - must pass before next task
 
 ### Task 6: Rainbow variant
 - [ ] create `backend/engine/rainbow.go`: `Rainbow` struct embedding `Standard`, registered as `"rainbow"`

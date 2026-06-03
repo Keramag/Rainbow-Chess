@@ -45,6 +45,27 @@ const (
 	King
 )
 
+// String renders the piece type as a lower-case English name ("pawn", "knight",
+// …); the empty type renders as "none". Handy for error messages and logging.
+func (t PieceType) String() string {
+	switch t {
+	case Pawn:
+		return "pawn"
+	case Knight:
+		return "knight"
+	case Bishop:
+		return "bishop"
+	case Rook:
+		return "rook"
+	case Queen:
+		return "queen"
+	case King:
+		return "king"
+	default:
+		return "none"
+	}
+}
+
 // Piece is a colored piece occupying a square. The zero value (Type == None) is
 // an empty square; its Color is meaningless in that case.
 type Piece struct {
