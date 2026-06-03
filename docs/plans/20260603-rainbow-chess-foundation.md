@@ -207,9 +207,11 @@
 - Coverage: `engine` package **96.7%** of statements (target ≥80%); top-level `rainbow-chess` 64.8%.
 
 ### Task 17: Documentation
-- [ ] write `README.md`: project overview, how to run locally (`go run` + open browser), how to play a 1v1 game, and **how to add a new Variant** (implement the interface / embed Standard + override + `Register`)
-- [ ] create/initialize `CLAUDE.md` capturing the engine/hub/frontend separation, the FEN wire-format decision, and the variant-extension pattern for future rule experiments
-- [ ] note documented rule decisions (Rainbow pawn direction by color; castling/en-passant inherited by Rainbow; draw detection limited to stalemate this iteration)
+- [x] write `README.md`: project overview, how to run locally (`go run` + open browser), how to play a 1v1 game, and **how to add a new Variant** (implement the interface / embed Standard + override + `Register`)
+- [x] create/initialize `CLAUDE.md` capturing the engine/hub/frontend separation, the FEN wire-format decision, and the variant-extension pattern for future rule experiments
+- [x] note documented rule decisions (Rainbow pawn direction by color; castling/en-passant inherited by Rainbow; draw detection limited to stalemate this iteration)
+
+✅ Task 17 done: added root `README.md` (overview; run locally via `cd backend && go run .` → http://localhost:8080; two-tab 1v1 play-through; `make test`; a copy-paste "add a new variant" skeleton that embeds `Standard`, sets name/promotions, overrides only what differs, and `Register`s in `init()`; the FEN/WebSocket protocol; deploy notes; project layout) and a contributor-facing `CLAUDE.md` (the rules/transport/render three-layer separation and why it keeps variants cheap, the FEN-as-wire-format decision with server-authoritative `game_start`/`game_update` payloads, and the embed-Standard variant-extension pattern incl. the no-virtual-dispatch reason the name/promotion knobs are fields). Documented rule decisions captured in both: Rainbow pawns move by colour (not board half), Rainbow inherits castling/en-passant unchanged, both Rainbow kings start in check with a playability re-roll, draw detection limited to stalemate. Protocol message names in the docs were verified against `hub.go`. `make test` green (Go: both packages ok; frontend: 54 passing).
 
 ## Technical Details
 
