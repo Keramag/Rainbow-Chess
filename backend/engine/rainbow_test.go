@@ -23,6 +23,20 @@ func TestRainbowNameAndPromotionPieces(t *testing.T) {
 	}
 }
 
+// TestRainbowLegalMovesOmitsQueenRookPromotions confirms Rainbow inherits the
+// promotion-filtering LegalMoves from the embedded Standard: a promoting pawn's
+// legal moves advertise only knight and bishop (Rainbow's whitelist), never
+// queen or rook — keeping the wire move list in step with Rainbow's ApplyMove.
+func TestRainbowLegalMovesOmitsQueenRookPromotions(t *testing.T) {
+	r := NewRainbow()
+	// A white pawn on a7 ready to promote; both kings present and out of reach.
+	pos := mustParse(t, "8/P7/8/8/8/8/8/k6K w - - 0 1")
+	got := promotionTargets(r.LegalMoves(pos), mustSquare(t, "a8"))
+	if len(got) != 2 || !got[Knight] || !got[Bishop] {
+		t.Errorf("Rainbow LegalMoves promotions = %v, want {Knight, Bishop}", got)
+	}
+}
+
 func TestRainbowRegisteredByInit(t *testing.T) {
 	v, err := Get("rainbow")
 	if err != nil {

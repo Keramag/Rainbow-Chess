@@ -46,8 +46,24 @@ func (s *Standard) InitialPosition() *Position {
 	return pos
 }
 
-// LegalMoves returns every legal move for the side to move.
-func (s *Standard) LegalMoves(pos *Position) []Move { return LegalMoves(pos) }
+// LegalMoves returns every legal move for the side to move, restricted to this
+// variant's promotion whitelist. Promotions to a piece the variant disallows are
+// dropped so the move list shipped to the client never advertises a promotion
+// ApplyMove would then reject — the picker is derived from this list, so the two
+// must agree. Reading the whitelist from the s.promotions field (not a hard-coded
+// set) is what lets an embedding variant such as Rainbow inherit the correct
+// filtering via the embedded *Standard receiver, the same way ApplyMove does.
+func (s *Standard) LegalMoves(pos *Position) []Move {
+	all := LegalMoves(pos)
+	legal := make([]Move, 0, len(all))
+	for _, m := range all {
+		if m.Promotion != None && !s.allowsPromotion(m.Promotion) {
+			continue
+		}
+		legal = append(legal, m)
+	}
+	return legal
+}
 
 // ApplyMove validates move under this variant's rules and returns the resulting
 // position. Beyond the engine's legality check it enforces the variant's

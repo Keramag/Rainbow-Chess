@@ -96,6 +96,48 @@ func TestVariantApplyMoveRejectsDisallowedPromotion(t *testing.T) {
 	}
 }
 
+// promotionTargets returns the set of promotion piece types among moves landing
+// on `to` (a from/to pair may appear once per allowed promotion).
+func promotionTargets(moves []Move, to Square) map[PieceType]bool {
+	got := map[PieceType]bool{}
+	for _, m := range moves {
+		if m.To == to && m.Promotion != None {
+			got[m.Promotion] = true
+		}
+	}
+	return got
+}
+
+// TestStandardLegalMovesFiltersPromotions confirms the variant's LegalMoves list
+// only advertises promotions the variant allows — so the client picker (derived
+// from this list) never offers a promotion ApplyMove would reject. Standard
+// allows all four; a restricted variant exposes only its whitelist.
+func TestStandardLegalMovesFiltersPromotions(t *testing.T) {
+	// White pawn on a7 ready to promote; both kings present and out of reach.
+	pos := mustParse(t, "8/P7/8/8/8/8/8/k6K w - - 0 1")
+	a8 := mustSquare(t, "a8")
+
+	t.Run("standard advertises all four", func(t *testing.T) {
+		got := promotionTargets(NewStandard().LegalMoves(pos), a8)
+		for _, want := range []PieceType{Queen, Rook, Bishop, Knight} {
+			if !got[want] {
+				t.Errorf("LegalMoves missing promotion to %s; got %v", want, got)
+			}
+		}
+		if len(got) != 4 {
+			t.Errorf("LegalMoves promotions = %v, want all four", got)
+		}
+	})
+
+	t.Run("restricted variant advertises only its whitelist", func(t *testing.T) {
+		queenOnly := &Standard{name: "queen-only", promotions: []PieceType{Queen}}
+		got := promotionTargets(queenOnly.LegalMoves(pos), a8)
+		if len(got) != 1 || !got[Queen] {
+			t.Errorf("queen-only LegalMoves promotions = %v, want {Queen}", got)
+		}
+	})
+}
+
 // TestStandardApplyMoveRejectsIllegalMove confirms the variant surfaces the
 // engine's illegal-move error rather than applying a bogus move.
 func TestStandardApplyMoveRejectsIllegalMove(t *testing.T) {
