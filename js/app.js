@@ -1,15 +1,18 @@
 // app.js — thin DOM glue that wires the MultiplayerClient to the page shell.
 //
-// This is the only module that touches the DOM. It owns no rules logic: it
-// registers handlers on the client and reflects server state into the header,
-// online-users panel, incoming-challenge prompt, and game-area placeholder. The
-// real chess board rendering is layered on in a later task; for now the game
-// area shows the variant, colors, and the raw FEN the server sent so a game is
-// observably "started" end to end.
+// This is the only module that touches the DOM. It owns no rules logic. Two
+// pure modules do the thinking it renders from:
+//   - game-state.js: the high-level screen state (menu / playing / over) plus
+//     the player/variant context and any transient notice. app.js never decides
+//     a transition inline — it dispatch()es each server message into the reducer
+//     and re-renders, so the whole game lifecycle stays unit-tested.
+//   - chess.js (BoardView): the board itself and click-to-move.
+// Everything else here (header, online-users, challenge prompt, toasts) is glue.
 
 import { MultiplayerClient } from './multiplayer.js';
 import { populateVariantPicker, variantLabel } from './variants.js';
 import { BoardView } from './chess.js';
+import { PHASE, initialState, reduce, returnToMenu, clearNotice, playerOutcome } from './game-state.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -24,13 +27,26 @@ const els = {
   acceptBtn: $('accept-challenge'),
   declineBtn: $('decline-challenge'),
   gameArea: $('game-area'),
+  gameInfo: $('game-info'),
   boardRoot: $('board-root'),
   resignBtn: $('resign-btn'),
+  gameOver: $('game-over'),
+  gameOverText: $('game-over-text'),
+  backToMenuBtn: $('back-to-menu'),
   gameIdle: $('game-idle'),
   toast: $('toast'),
 };
 
 const client = new MultiplayerClient();
+
+// ui is the high-level screen state, owned by the pure reducer. dispatch() is
+// the single place server (and local) events fold into it before a re-render.
+let ui = initialState();
+
+function dispatch(msg) {
+  ui = reduce(ui, msg);
+  renderUI();
+}
 
 // The board renderer owns all in-game rendering and click-to-move; it relays a
 // completed move back to the server through the client.
@@ -106,26 +122,58 @@ function hideChallengePrompt() {
   if (els.challengePrompt) els.challengePrompt.hidden = true;
 }
 
-function showGame(msg) {
-  if (els.gameArea) els.gameArea.hidden = false;
-  if (els.gameIdle) els.gameIdle.hidden = true;
-  if (els.resignBtn) els.resignBtn.disabled = false;
-  board.start(msg, opponentName);
-}
+// renderUI reflects the reducer's screen state onto the page: which panel is
+// visible, the in-game player/variant header, the game-over offer, and any
+// transient notice (decline / expiry / disconnect / error) as a toast.
+function renderUI() {
+  const inGame = ui.phase !== PHASE.MENU;
+  if (els.gameArea) els.gameArea.hidden = !inGame;
+  if (els.gameIdle) els.gameIdle.hidden = inGame;
+  // Resign is only meaningful while a game is actually in progress.
+  if (els.resignBtn) els.resignBtn.disabled = ui.phase !== PHASE.PLAYING;
 
-function endGame() {
-  if (els.gameArea) els.gameArea.hidden = true;
-  if (els.gameIdle) els.gameIdle.hidden = false;
-}
+  renderGameInfo();
+  renderGameOver();
 
-function updateGame(msg) {
-  board.update(msg);
-  if (msg.result && msg.result.outcome && msg.result.outcome !== 'ongoing') {
-    if (els.resignBtn) els.resignBtn.disabled = true;
-    // The board keeps the final position on screen; clear the game area after a
-    // short beat so players can read the result before returning to the menu.
-    setTimeout(endGame, 5000);
+  if (ui.notice) {
+    toast(ui.notice.text);
+    ui = clearNotice(ui);
   }
+}
+
+// renderGameInfo shows the active variant and both players with their colors,
+// marking which side is "you". client.username is known by game_start (welcome
+// always arrives first); opponentName is remembered when we issue/accept.
+function renderGameInfo() {
+  if (!els.gameInfo) return;
+  const g = ui.game;
+  if (!g) {
+    els.gameInfo.textContent = '';
+    return;
+  }
+  const me = client.username || 'You';
+  const opp = g.opponentName || 'Opponent';
+  const white = g.myColor === 'white' ? me : opp;
+  const black = g.myColor === 'white' ? opp : me;
+  const youWhite = g.myColor === 'white' ? ' (you)' : '';
+  const youBlack = g.myColor === 'black' ? ' (you)' : '';
+  els.gameInfo.textContent = `${variantLabel(g.variant)} · White: ${white}${youWhite}  vs  Black: ${black}${youBlack}`;
+}
+
+// renderGameOver shows the result and the "new game / back to menu" offer when a
+// game has ended; the final board stays on screen behind it.
+function renderGameOver() {
+  if (!els.gameOver) return;
+  const g = ui.game;
+  if (ui.phase !== PHASE.OVER || !g || !g.result) {
+    els.gameOver.hidden = true;
+    return;
+  }
+  const outcome = playerOutcome(g.result, g.myColor);
+  const headline = outcome === 'win' ? 'You win' : outcome === 'loss' ? 'You lose' : 'Draw';
+  const reason = g.result.reason ? ` (${g.result.reason})` : '';
+  if (els.gameOverText) els.gameOverText.textContent = `${headline}${reason}`;
+  els.gameOver.hidden = false;
 }
 
 let toastTimer = null;
@@ -150,21 +198,24 @@ client
   })
   .on('users_update', () => renderUsers())
   .on('challenge_received', (msg) => showChallengePrompt(msg))
-  .on('challenge_declined', () => toast('Your challenge was declined.'))
-  .on('challenge_expired', () => {
+  .on('challenge_declined', (msg) => dispatch(msg))
+  .on('challenge_expired', (msg) => {
     hideChallengePrompt();
-    toast('A challenge expired.');
+    dispatch(msg);
   })
   .on('game_start', (msg) => {
     hideChallengePrompt();
-    showGame(msg);
+    // The board renderer needs the raw message + the opponent name; the reducer
+    // tracks the surrounding screen state (and the same opponent name).
+    board.start(msg, opponentName);
+    dispatch({ ...msg, opponentName });
   })
-  .on('game_update', (msg) => updateGame(msg))
-  .on('opponent_disconnected', () => {
-    toast('Opponent disconnected — you win.');
-    setTimeout(endGame, 5000);
+  .on('game_update', (msg) => {
+    board.update(msg);
+    dispatch(msg);
   })
-  .on('error', (msg) => toast(msg.message || 'Error'));
+  .on('opponent_disconnected', (msg) => dispatch(msg))
+  .on('error', (msg) => dispatch(msg));
 
 if (els.acceptBtn) {
   els.acceptBtn.addEventListener('click', () => {
@@ -186,6 +237,16 @@ if (els.declineBtn) {
     hideChallengePrompt();
   });
 }
+if (els.backToMenuBtn) {
+  // "New game / back to menu": discard the finished game and return to the
+  // lobby-less menu, where the player can issue or accept a fresh challenge.
+  els.backToMenuBtn.addEventListener('click', () => {
+    ui = returnToMenu(ui);
+    opponentName = '';
+    renderUI();
+  });
+}
 
 setStatus(false);
+renderUI();
 client.connect();

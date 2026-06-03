@@ -163,11 +163,13 @@
 ➕ Added during Task 12: a server-side `inCheck` flag on `game_start`/`game_update` (`Message.InCheck`, derived from `engine.IsInCheck`) so the client's check banner stays rule-free — the frontend never re-implements chess logic. The promotion picker reads its allowed pieces straight from the legal-move list (Standard surfaces Q/R/B/N, Rainbow only N/B), so no separate variant lookup is needed on the client. `BoardView` (chess.js) is the DOM renderer; all derivations live in the pure, unit-tested `board-model.js`. `index.html` now hosts a `#board-root` + Resign button; `app.js` drives the board on `game_start`/`game_update` and remembers the opponent name for the banner. Frontend tests: 35 passing (16 new for board-model).
 
 ### Task 13: End-to-end game wiring + variant selection
-- [ ] connect challenge picker → `game_start` → board render → moves → `game_update` → game-over, so a full game is playable between two browser tabs for BOTH variants
-- [ ] display the active variant name and both players' usernames/colors during the game; offer "new game / back to lobby-less menu" on game end
-- [ ] handle disconnect/opponent-left and challenge-expiry/decline gracefully in the UI
-- [ ] write `node --test` tests for the game-state reducer (applying `game_start`/`game_update`/game-over to local UI state)
-- [ ] run `node --test` (frontend) and `go test ./...` - must pass before next task
+- [x] connect challenge picker → `game_start` → board render → moves → `game_update` → game-over, so a full game is playable between two browser tabs for BOTH variants
+- [x] display the active variant name and both players' usernames/colors during the game; offer "new game / back to lobby-less menu" on game end
+- [x] handle disconnect/opponent-left and challenge-expiry/decline gracefully in the UI
+- [x] write `node --test` tests for the game-state reducer (applying `game_start`/`game_update`/game-over to local UI state)
+- [x] run `node --test` (frontend) and `go test ./...` - must pass before next task
+
+➕ Added during Task 13: `js/game-state.js` — a pure, DOM-free reducer owning the app's high-level screen state (`PHASE` menu/playing/over, the active `game` context, and a transient `notice`). `app.js` now `dispatch()`es every game-lifecycle message (`game_start`/`game_update`/`opponent_disconnected`/`challenge_declined`/`challenge_expired`/`error`) into `reduce()` and renders from the result, instead of deciding transitions inline — this is the unit-tested "local UI state" the task calls for (`js/game-state.test.js`, 19 new tests covering the full menu→playing→over→menu flow, checkmate/stalemate/resign/disconnect endings, `playerOutcome`, decline/expiry/error notices, and the back-to-menu reset). The auto-hide-after-5s on game end was replaced with an explicit game-over panel (result line + "New game" → `returnToMenu`); an in-game `#game-info` header shows the variant and both players with their colours (marking which side is "you"). The board itself stays driven directly by `BoardView` (`chess.js`); the reducer only owns the surrounding chrome, so the two never duplicate chess logic. Frontend tests: 54 passing (was 35).
 
 ### Task 14: Dockerfile + docker-compose
 - [ ] create multi-stage `Dockerfile` adapted from virusgame (build Go server in golang-alpine, copy binary + static frontend into alpine, inject `COMMIT_SHA`, `EXPOSE 8080`) — **no bot-hoster stage**

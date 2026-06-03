@@ -349,6 +349,34 @@ button.primary {
   gap: 10px;
 }
 
+/* In-game header: active variant + both players and their colours. */
+.game-info {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 6px 2px;
+}
+
+/* Game-over offer: result line + "new game / back to menu" button. */
+.game-over {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 4px;
+  padding: 12px 16px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--online);
+  border-radius: 8px;
+}
+
+.game-over-text {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
 /* Incoming challenge prompt */
 .challenge-prompt {
   position: fixed;

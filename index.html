@@ -33,9 +33,15 @@
       <section class="panel game-panel">
         <h2>Game</h2>
         <div id="game-area" class="game-area" hidden>
+          <div id="game-info" class="game-info"></div>
           <div id="board-root" class="board-root"></div>
           <div class="game-controls">
             <button id="resign-btn">Resign</button>
+          </div>
+          <!-- Shown on game end: result + return to the lobby-less menu. -->
+          <div id="game-over" class="game-over" hidden>
+            <p id="game-over-text" class="game-over-text"></p>
+            <button id="back-to-menu" class="primary">New game</button>
           </div>
         </div>
         <p id="game-idle" class="muted">No active game. Challenge a player to start.</p>
