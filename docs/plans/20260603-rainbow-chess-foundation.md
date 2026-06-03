@@ -190,11 +190,21 @@
 ➕ Added during Task 15: three jobs — `test` (sets up Go 1.24 + Node 22 and runs `make test`, i.e. the exact `go test ./...` + `node --test` developers run locally), `build-and-push` (needs `test`, gated off `pull_request`; logs into GHCR, builds the multi-stage image with `COMMIT_SHA` and pushes `:${sha}` + `:latest`, then sed-pins the SHA into `docker-compose.yml` on a force-pushed `deploy` branch), and `deploy` (needs `build-and-push`; fires the `PORTAINER_REDEPLOY_HOOK` webhook). GHCR requires lowercase paths so the image name is computed as `ghcr.io/<lowercased-owner>/rainbow-chess` (the repo owner is mixed-case `Keramag`); the CI sed pattern (`image: ghcr.io/[^/]*/rainbow-chess:.*`) is owner-agnostic so it rewrites the `korjavin` placeholder in the committed compose regardless. Added a root `Makefile` (`test`/`test-backend`/`test-frontend`) as the single CI-and-local entry point. No bot-hoster image/webhook (vs. virusgame's two). YAML validated via `python3 yaml.safe_load` (jobs/needs/secrets/build-args asserted); `make test` green (Go: 2 packages ok, frontend: 54 passing).
 
 ### Task 16: Verify acceptance criteria
-- [ ] verify all Overview requirements are implemented: two registered variants (standard + rainbow), 1v1 challenge w/o lobby, no AI/bot code present, full legal chess for standard, Rainbow symmetry + N/B promotion
-- [ ] verify edge cases: checkmate/stalemate end games, illegal/out-of-turn moves rejected, challenge expiry/decline, disconnect handling
-- [ ] run the full backend suite `go test ./...` and frontend `node --test`
-- [ ] run `go vet ./...` (and `gofmt -l` / any configured linter) — all issues fixed
-- [ ] confirm test coverage of the `engine` package is solid (engine is correctness-critical; aim 80%+)
+- [x] verify all Overview requirements are implemented: two registered variants (standard + rainbow), 1v1 challenge w/o lobby, no AI/bot code present, full legal chess for standard, Rainbow symmetry + N/B promotion
+- [x] verify edge cases: checkmate/stalemate end games, illegal/out-of-turn moves rejected, challenge expiry/decline, disconnect handling
+- [x] run the full backend suite `go test ./...` and frontend `node --test`
+- [x] run `go vet ./...` (and `gofmt -l` / any configured linter) — all issues fixed
+- [x] confirm test coverage of the `engine` package is solid (engine is correctness-critical; aim 80%+)
+
+✅ Task 16 verification results:
+- Variants: `engine` registers `"standard"` and `"rainbow"` via `init()`; `TestHubConnect_WelcomeContainsBothVariants` asserts the `welcome` payload carries both.
+- 1v1 / no lobby: challenge lifecycle tested (`TestChallengeLifecycle_AcceptCreatesGame`, `_RainbowVariant`); self/offline/busy/unknown-variant all rejected (`TestChallengeInvalid_*`). No lobby/bot/neutral code remains — only comments documenting what was stripped from the virusgame blueprint.
+- Full legal chess (Standard): `TestPerft` (start, kiwipete, ep-position-3), all castling cases (both sides / blocked / no-rights / through-attack / while-in-check), en passant (incl. stale-flag ignored), promotion-to-4, fool's mate + back-rank mate (`TestResultFoolsMate`, `TestResultBackRankMateWhiteWins`), stalemate (`TestResultStalemate`).
+- Rainbow: `TestRainbowSymmetryAcrossManySeeds`, both kings present (`TestRainbowInitialPositionValidates`), promotion list = {Knight, Bishop} with Q/R rejected (`TestRainbowApplyMoveRejectsQueenRookPromotion`).
+- Edge cases (hub): `TestGameEnd_Checkmate` / `_Stalemate` / `_Resign` / `_Disconnect`, `TestMove_Illegal`, `TestMove_OutOfTurn`, `TestChallengeExpiry`, `TestChallengeDecline`, `TestHubDisconnect_UnknownClientIsSafe`.
+- Suites green: `go test ./...` → both packages ok; `node --test` → 54 passing.
+- Lint: `go vet ./...` clean (exit 0); `gofmt -l .` reports no files (exit 0).
+- Coverage: `engine` package **96.7%** of statements (target ≥80%); top-level `rainbow-chess` 64.8%.
 
 ### Task 17: Documentation
 - [ ] write `README.md`: project overview, how to run locally (`go run` + open browser), how to play a 1v1 game, and **how to add a new Variant** (implement the interface / embed Standard + override + `Register`)
