@@ -55,14 +55,38 @@ func init() { Register("rainbow", NewRainbow()) }
 // empty in the initial position.
 var rainbowColoredRanks = [4]int8{0, 1, 6, 7}
 
+// maxInitialAttempts bounds the playability re-roll in InitialPosition. With
+// roughly three quarters of colourings playable, reaching this many consecutive
+// rejections is statistically impossible; the cap exists only so a deep bug
+// surfaces as a panic rather than an infinite loop.
+const maxInitialAttempts = 1000
+
 // InitialPosition returns a fresh Rainbow starting position: standard piece
 // types on standard squares, recoloured structured-randomly subject to the
-// symmetry constraint. It advances the variant's RNG, so successive games get
-// different colourings.
+// symmetry constraint, and guaranteed playable for the side to move. It advances
+// the variant's RNG, so successive games get different colourings.
+//
+// Why the re-roll: under symmetric colouring of the standard layout BOTH kings
+// always start in check (a structural property — the squares around e1/e8 are
+// densely surrounded). That is fine and intended; the side to move simply
+// answers the check on move one. But when White (always the side to move) is in
+// check with no legal escape, the position is an immediate checkmate — a game
+// that begins already over. About a quarter of colourings are like that, so we
+// discard any colouring in which White has no legal move and roll again. The
+// rejection only ever removes already-lost starts, so it cannot bias the colour
+// distribution among playable games. buildInitialPosition stays the pure,
+// single-shot primitive the tests assert against; the guarantee lives here, on
+// the production path the hub actually uses to start a game.
 func (r *Rainbow) InitialPosition() *Position {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	return r.buildInitialPosition(r.rng)
+	for i := 0; i < maxInitialAttempts; i++ {
+		pos := r.buildInitialPosition(r.rng)
+		if len(LegalMoves(pos)) > 0 {
+			return pos
+		}
+	}
+	panic("engine: rainbow could not produce a playable initial position")
 }
 
 // buildInitialPosition does the actual colour assignment using the supplied RNG.

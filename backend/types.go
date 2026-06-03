@@ -49,6 +49,12 @@ type Message struct {
 
 	// Error (server -> client).
 	Message string `json:"message,omitempty"`
+
+	// TimerSeq is an internal, hub-only field (never serialized): it stamps an
+	// auto-resign move_timeout message with the move count at which the timer
+	// was armed, so a timer that fires after its turn has already passed can be
+	// recognised as stale and ignored.
+	TimerSeq int `json:"-"`
 }
 
 // UserInfo is a connected user as advertised in the online-users list.

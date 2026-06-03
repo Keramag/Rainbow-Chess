@@ -133,6 +133,25 @@ func TestRainbowInitialPositionValidates(t *testing.T) {
 	}
 }
 
+// TestRainbowInitialPositionIsPlayable locks in the production guarantee: every
+// position InitialPosition hands out must be playable for the side to move (at
+// least one legal move, i.e. not an immediate checkmate). buildInitialPosition
+// alone makes no such promise — about a quarter of raw colourings are already
+// lost for White — so this drives the production path many times to confirm the
+// re-roll filters those out.
+func TestRainbowInitialPositionIsPlayable(t *testing.T) {
+	r := NewRainbow()
+	for i := 0; i < 500; i++ {
+		pos := r.InitialPosition()
+		if len(LegalMoves(pos)) == 0 {
+			t.Fatalf("iteration %d: InitialPosition has no legal moves (FEN %q)", i, pos.FEN())
+		}
+		if Result(pos).IsOver() {
+			t.Fatalf("iteration %d: InitialPosition starts already over: %+v (FEN %q)", i, Result(pos), pos.FEN())
+		}
+	}
+}
+
 // TestRainbowValidateRejectsBadPosition makes sure validate() actually catches
 // violations rather than always returning nil.
 func TestRainbowValidateRejectsBadPosition(t *testing.T) {

@@ -127,12 +127,14 @@
 - [x] run `go test ./...` - must pass before next task
 
 ### Task 9: In-game move protocol
-- [ ] implement `move` handler: look up the game's variant, validate the incoming `{from,to,promotion}` against `LegalMoves`, `ApplyMove`, then broadcast `game_update` = `{fen, sideToMove, legalMoves, lastMove, result}` to both players
-- [ ] enforce turn ownership (reject moves from the player not on turn / not in the game) and surface illegal moves as an `error` message to the sender only
-- [ ] implement `resign` and a per-turn move timer (auto-resign), then end the game and trigger persistence (Task 10 hook) on checkmate/stalemate/resign/timeout/disconnect
-- [ ] write tests for legal move application + broadcast payload, and illegal/out-of-turn move rejection
-- [ ] write tests for game-ending paths (checkmate sets correct winner, stalemate = draw, resign, disconnect)
-- [ ] run `go test ./...` - must pass before next task
+- [x] implement `move` handler: look up the game's variant, validate the incoming `{from,to,promotion}` against `LegalMoves`, `ApplyMove`, then broadcast `game_update` = `{fen, sideToMove, legalMoves, lastMove, result}` to both players
+- [x] enforce turn ownership (reject moves from the player not on turn / not in the game) and surface illegal moves as an `error` message to the sender only
+- [x] implement `resign` and a per-turn move timer (auto-resign), then end the game and trigger persistence (Task 10 hook) on checkmate/stalemate/resign/timeout/disconnect
+- [x] write tests for legal move application + broadcast payload, and illegal/out-of-turn move rejection
+- [x] write tests for game-ending paths (checkmate sets correct winner, stalemate = draw, resign, disconnect)
+- [x] run `go test ./...` - must pass before next task
+
+⚠️ Discovered & fixed during Task 9: the randomized Rainbow `InitialPosition()` could start a game already over. Under symmetric colouring of the standard layout **both kings always start in check** (a structural property), and ~25% of colourings left White (always the side to move) checkmated on move one — surfacing as a flaky `TestChallengeLifecycle_RainbowVariant` ("rainbow game_start has no legal moves"). Fix: the production `InitialPosition()` now re-rolls the colouring until White has ≥1 legal move (a playable start), while `buildInitialPosition` stays the pure single-shot primitive the seeded engine tests assert against. Added `TestRainbowInitialPositionIsPlayable`. The game-end persistence is wired through a `gameEnded func(*Game)` hook field on `Hub` (nil = no-op), which Task 10 will point at `SaveGame`.
 
 ### Task 10: SQLite game persistence
 - [ ] create `backend/storage.go` adapted from virusgame: `games` table (`id, started_at, ended_at, variant, white_name, black_name, result, termination, moves`) where `moves` is the move list (UCI/SAN or FEN history) sufficient to review the game

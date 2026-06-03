@@ -17,6 +17,10 @@ const (
 	// expired challenges. Both are fields on Hub so tests can shrink them.
 	defaultChallengeTTL   = 30 * time.Second
 	defaultExpiryInterval = 1 * time.Second
+
+	// defaultMoveTimeout is how long the side to move has before it is
+	// auto-resigned. It is a field on Hub so tests can shrink it.
+	defaultMoveTimeout = 120 * time.Second
 )
 
 // hub.go is the heart of the server: a single goroutine (run) owns all shared
@@ -52,6 +56,15 @@ type Hub struct {
 	// Set from newHub's defaults; tests may override them before run() starts.
 	challengeTTL   time.Duration
 	expiryInterval time.Duration
+
+	// moveTimeout is the per-turn auto-resign deadline. Set from newHub's
+	// default; tests may shrink it before run() starts.
+	moveTimeout time.Duration
+
+	// gameEnded is the persistence hook fired once when a game finishes (with
+	// its final result recorded). It is nil by default — Task 10 wires it to the
+	// SQLite SaveGame path. It runs on the hub goroutine, so it must not block.
+	gameEnded func(*Game)
 }
 
 func newHub() *Hub {
@@ -67,6 +80,7 @@ func newHub() *Hub {
 
 		challengeTTL:   defaultChallengeTTL,
 		expiryInterval: defaultExpiryInterval,
+		moveTimeout:    defaultMoveTimeout,
 	}
 }
 
@@ -138,36 +152,47 @@ func (h *Hub) handleDisconnect(client *Client) {
 		}
 	}
 
-	// Tear down any game this user was in, notifying the opponent.
-	for gameID, game := range h.games {
+	// Tear down any game this user was in: the opponent wins by abandonment.
+	// endGame records the result, fires persistence, frees the opponent and
+	// removes the game; deleting from h.games while ranging it is safe in Go.
+	for _, game := range h.games {
+		if game.GameOver {
+			continue
+		}
 		var opponent *User
+		var result engine.GameResult
 		switch {
 		case game.White != nil && game.White.ID == user.ID:
-			opponent = game.Black
+			opponent, result = game.Black, engine.GameResult{Outcome: engine.BlackWins, Reason: "opponent disconnected"}
 		case game.Black != nil && game.Black.ID == user.ID:
-			opponent = game.White
+			opponent, result = game.White, engine.GameResult{Outcome: engine.WhiteWins, Reason: "opponent disconnected"}
 		default:
 			continue
 		}
 		if opponent != nil {
-			opponent.InGame = false
-			opponent.GameID = ""
 			h.sendToUser(opponent, &Message{
 				Type:   "opponent_disconnected",
-				GameID: gameID,
+				GameID: game.ID,
+				Result: resultToDTO(result),
 			})
 		}
-		delete(h.games, gameID)
+		h.endGame(game, result)
 	}
 
 	delete(h.users, user.ID)
 	h.broadcastUserList()
 }
 
-// handleClientMessage dispatches an inbound message to its handler. The
-// in-game move/resign handlers are added in later tasks; unknown types are
-// logged and ignored.
+// handleClientMessage dispatches an inbound message to its handler. Most
+// messages carry the client that sent them, but the auto-resign timer enqueues
+// an internal move_timeout message with no client — that is handled first,
+// before the client/user guard. Unknown types are logged and ignored.
 func (h *Hub) handleClientMessage(client *Client, msg *Message) {
+	// Internal, hub-generated messages have no associated client.
+	if msg.Type == "move_timeout" {
+		h.handleMoveTimeout(msg)
+		return
+	}
 	if client == nil || client.user == nil {
 		return
 	}
@@ -178,6 +203,10 @@ func (h *Hub) handleClientMessage(client *Client, msg *Message) {
 		h.handleAcceptChallenge(client.user, msg)
 	case "decline_challenge":
 		h.handleDeclineChallenge(client.user, msg)
+	case "move":
+		h.handleMove(client.user, msg)
+	case "resign":
+		h.handleResign(client.user, msg)
 	default:
 		log.Printf("Unknown message type: %s", msg.Type)
 	}
@@ -312,6 +341,8 @@ func (h *Hub) handleAcceptChallenge(user *User, msg *Message) {
 	})
 
 	h.broadcastUserList()
+	// The clock starts on White the moment the game begins.
+	h.startMoveTimer(game)
 	log.Printf("Game started: %s (white) vs %s (black) — %s [%s]", from.Username, user.Username, challenge.Variant, gameID)
 }
 
@@ -331,6 +362,212 @@ func (h *Hub) handleDeclineChallenge(user *User, msg *Message) {
 		ChallengeID: msg.ChallengeID,
 	})
 	log.Printf("Challenge declined: %s declined %s", user.Username, challenge.FromUser.Username)
+}
+
+// gamePlayerColor reports the color user plays in game, and whether the user is
+// in fact one of the two players. It is the single source of truth for "whose
+// move is this", used by the move and resign handlers.
+func gamePlayerColor(game *Game, user *User) (engine.Color, bool) {
+	switch {
+	case game.White != nil && game.White.ID == user.ID:
+		return engine.White, true
+	case game.Black != nil && game.Black.ID == user.ID:
+		return engine.Black, true
+	default:
+		return engine.White, false
+	}
+}
+
+// handleMove validates and applies an in-game move from user. The server is
+// authoritative: it rejects moves from a player not in a game, from a player not
+// on turn, and any move the variant deems illegal — surfacing each as an error
+// to the sender only. On a legal move it advances the position and broadcasts a
+// game_update (fen, side to move, the next player's legal moves, the move just
+// played, and the current result) to both players. A move that ends the game is
+// finalized via endGame; otherwise the auto-resign clock is re-armed.
+func (h *Hub) handleMove(user *User, msg *Message) {
+	game, ok := h.games[user.GameID]
+	if !ok {
+		h.sendError(user, "You are not in a game")
+		return
+	}
+	if game.GameOver {
+		h.sendError(user, "That game is already over")
+		return
+	}
+	color, isPlayer := gamePlayerColor(game, user)
+	if !isPlayer {
+		h.sendError(user, "You are not a player in this game")
+		return
+	}
+	if game.Position.SideToMove != color {
+		h.sendError(user, "It is not your turn")
+		return
+	}
+	if msg.Move == nil {
+		h.sendError(user, "No move supplied")
+		return
+	}
+
+	mv, err := dtoToMove(*msg.Move)
+	if err != nil {
+		h.sendError(user, fmt.Sprintf("Invalid move: %v", err))
+		return
+	}
+	variant, err := engine.Get(game.Variant)
+	if err != nil {
+		h.sendError(user, fmt.Sprintf("Unknown variant %q", game.Variant))
+		return
+	}
+	next, err := variant.ApplyMove(game.Position, mv)
+	if err != nil {
+		// Illegal moves are a normal client occurrence; tell only the sender.
+		h.sendError(user, "Illegal move")
+		return
+	}
+
+	game.Position = next
+	game.Moves = append(game.Moves, mv.String())
+	game.LastMove = time.Now()
+
+	result := variant.Result(next)
+	lastMove := moveToDTO(mv)
+	update := &Message{
+		Type:       "game_update",
+		GameID:     game.ID,
+		FEN:        next.FEN(),
+		SideToMove: next.SideToMove.String(),
+		LegalMoves: movesToDTO(variant.LegalMoves(next)),
+		LastMove:   &lastMove,
+		Result:     resultToDTO(result),
+	}
+	h.sendToUser(game.White, update)
+	h.sendToUser(game.Black, update)
+
+	if result.IsOver() {
+		// The terminal result already rode out on the game_update above; endGame
+		// just records it, frees the players and fires persistence.
+		h.endGame(game, result)
+		return
+	}
+	h.startMoveTimer(game)
+}
+
+// handleResign ends user's current game in their opponent's favor. Only a player
+// in the game may resign it; the opponent is awarded the win by resignation.
+func (h *Hub) handleResign(user *User, msg *Message) {
+	game, ok := h.games[user.GameID]
+	if !ok || game.GameOver {
+		return
+	}
+	color, isPlayer := gamePlayerColor(game, user)
+	if !isPlayer {
+		h.sendError(user, "You are not a player in this game")
+		return
+	}
+	result := winFor(color.Opposite(), "resignation")
+	h.broadcastGameResult(game, result)
+	h.endGame(game, result)
+	log.Printf("Game %s ended by resignation (%s resigned)", game.ID, user.Username)
+}
+
+// handleMoveTimeout auto-resigns the side to move when its turn clock expires.
+// The timer fires on its own goroutine and routes here through the hub channel,
+// so it may arrive after the turn has already passed: TimerSeq is compared
+// against the current move count and a stale timeout is ignored. A timeout that
+// is still current ends the game in the waiting player's favor.
+func (h *Hub) handleMoveTimeout(msg *Message) {
+	game, ok := h.games[msg.GameID]
+	if !ok || game.GameOver {
+		return
+	}
+	if msg.TimerSeq != len(game.Moves) {
+		return // a move was played after this timer was armed; ignore.
+	}
+	result := winFor(game.Position.SideToMove.Opposite(), "timeout")
+	h.broadcastGameResult(game, result)
+	h.endGame(game, result)
+	log.Printf("Game %s ended on timeout (%s to move ran out of time)", game.ID, game.Position.SideToMove)
+}
+
+// winFor builds a GameResult awarding the win to the given color for reason.
+func winFor(c engine.Color, reason string) engine.GameResult {
+	if c == engine.White {
+		return engine.GameResult{Outcome: engine.WhiteWins, Reason: reason}
+	}
+	return engine.GameResult{Outcome: engine.BlackWins, Reason: reason}
+}
+
+// startMoveTimer arms (or re-arms) the auto-resign clock for the side to move.
+// The timer fires on its own goroutine, so it does not touch game state
+// directly — it enqueues a move_timeout message stamped with the current move
+// count so the hub goroutine can detect and discard a stale firing.
+func (h *Hub) startMoveTimer(game *Game) {
+	if game.MoveTimer != nil {
+		game.MoveTimer.Stop()
+		game.MoveTimer = nil
+	}
+	if game.GameOver {
+		return
+	}
+	gameID := game.ID
+	seq := len(game.Moves)
+	game.MoveTimer = time.AfterFunc(h.moveTimeout, func() {
+		h.handleMessage <- &MessageWrapper{
+			client:  nil,
+			message: &Message{Type: "move_timeout", GameID: gameID, TimerSeq: seq},
+		}
+	})
+}
+
+// broadcastGameResult sends a game_update carrying the final result (and the
+// current FEN) to both players. Used for endings that are not the direct
+// consequence of a move — resignation and timeout — where there is no last move
+// or legal-move list to ship.
+func (h *Hub) broadcastGameResult(game *Game, result engine.GameResult) {
+	msg := &Message{
+		Type:       "game_update",
+		GameID:     game.ID,
+		FEN:        game.Position.FEN(),
+		SideToMove: game.Position.SideToMove.String(),
+		Result:     resultToDTO(result),
+	}
+	h.sendToUser(game.White, msg)
+	h.sendToUser(game.Black, msg)
+}
+
+// endGame finalizes an in-progress game exactly once: it records the result,
+// stops the move timer, frees both players, fires the persistence hook (Task
+// 10), removes the game from the active set and refreshes the online-users
+// roster. It must run on the hub goroutine. Callers are responsible for sending
+// any player-facing result message first (a move ending carries the result on
+// its game_update; resign/timeout use broadcastGameResult).
+func (h *Hub) endGame(game *Game, result engine.GameResult) {
+	if game.GameOver {
+		return
+	}
+	game.GameOver = true
+	game.Result = result
+	game.EndTime = time.Now()
+
+	if game.MoveTimer != nil {
+		game.MoveTimer.Stop()
+		game.MoveTimer = nil
+	}
+
+	if game.White != nil {
+		game.White.InGame, game.White.GameID = false, ""
+	}
+	if game.Black != nil {
+		game.Black.InGame, game.Black.GameID = false, ""
+	}
+
+	if h.gameEnded != nil {
+		h.gameEnded(game)
+	}
+
+	delete(h.games, game.ID)
+	h.broadcastUserList()
 }
 
 // checkExpiredChallenges drops every pending challenge older than challengeTTL,
