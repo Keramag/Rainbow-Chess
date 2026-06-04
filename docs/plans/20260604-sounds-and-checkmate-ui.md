@@ -260,16 +260,19 @@ Drive the new overlay from existing reducer state; toggle the board-dim class.
 
 ### Task 7: Verify acceptance criteria
 
-- [ ] verify all four sound events classify correctly via the unit suite (move,
+- [x] verify all four sound events classify correctly via the unit suite (move,
       capture, check, game-end win/loss/draw).
-- [ ] verify game-end-via-resign, via-timeout, and via-opponent-disconnect all
-      classify to a game-end event (not a move sound).
-- [ ] verify the overlay shows the right headline for win/loss/draw and that the
+- [x] verify game-end-via-resign, via-timeout, and via-opponent-disconnect all
+      classify to a game-end event (not a move sound). (Added an explicit
+      `timeout` assertion to `js/sound-events.test.js` alongside resign/disconnect.)
+- [x] verify the overlay shows the right headline for win/loss/draw and that the
       New-game button still returns to the menu and clears the overlay.
-- [ ] run the full unit suite: `node --test` (frontend) and
-      `cd backend && go test ./...` (backend regression) — all green.
-- [ ] run `make test` (the single CI-matching entry point) — all green.
-- [ ] confirm no backend files changed and the static-file whitelist is
+      (`endgameHeadline` tests cover all reasons; `back-to-menu` calls
+      `returnToMenu` → re-render hides overlay + removes board-dim class.)
+- [x] run the full unit suite: `node --test` (frontend, 79 pass) and
+      `cd backend && go test ./...` (backend regression, ok) — all green.
+- [x] run `make test` (the single CI-matching entry point) — all green.
+- [x] confirm no backend files changed and the static-file whitelist is
       untouched (no audio assets served).
 
 ### Task 8: [Final] Update documentation

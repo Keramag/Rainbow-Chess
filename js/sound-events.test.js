@@ -100,7 +100,7 @@ test('stalemate -> gameEndDraw for either colour', () => {
   }
 });
 
-test('resign / disconnect terminal result -> game-end event (win for the remaining side)', () => {
+test('resign / timeout / disconnect terminal result -> game-end event (not a move sound)', () => {
   // A resign update may arrive with an unchanged fen; the terminal result still
   // drives the cue.
   const resign = eventForUpdate({
@@ -111,6 +111,16 @@ test('resign / disconnect terminal result -> game-end event (win for the remaini
     myColor: 'white',
   });
   assert.equal(resign, SOUND_EVENTS.GAME_END_WIN);
+
+  // Turn-timeout rides the same terminal-result DTO; the loser hears the loss cue.
+  const timeout = eventForUpdate({
+    prevFen: START_FEN,
+    fen: START_FEN,
+    inCheck: false,
+    result: { outcome: 'white_wins', reason: 'timeout' },
+    myColor: 'black',
+  });
+  assert.equal(timeout, SOUND_EVENTS.GAME_END_LOSS);
 
   const disconnect = eventForUpdate({
     prevFen: START_FEN,
