@@ -12,7 +12,7 @@
 import { MultiplayerClient } from './multiplayer.js';
 import { populateVariantPicker, variantLabel } from './variants.js';
 import { BoardView } from './chess.js';
-import { PHASE, initialState, reduce, returnToMenu, clearNotice, playerOutcome } from './game-state.js';
+import { PHASE, initialState, reduce, returnToMenu, clearNotice, playerOutcome, endgameHeadline } from './game-state.js';
 import { eventForUpdate } from './sound-events.js';
 import { AudioPlayer } from './audio.js';
 
@@ -30,7 +30,11 @@ const els = {
   declineBtn: $('decline-challenge'),
   gameArea: $('game-area'),
   gameInfo: $('game-info'),
+  boardWrap: document.querySelector('.board-wrap'),
   boardRoot: $('board-root'),
+  gameOverOverlay: $('game-over-overlay'),
+  gameOverTitle: $('game-over-title'),
+  gameOverDetail: $('game-over-detail'),
   resignBtn: $('resign-btn'),
   gameOver: $('game-over'),
   gameOverText: $('game-over-text'),
@@ -164,20 +168,38 @@ function renderGameInfo() {
   els.gameInfo.textContent = `${variantLabel(g.variant)} · White: ${white}${youWhite}  vs  Black: ${black}${youBlack}`;
 }
 
-// renderGameOver shows the result and the "new game / back to menu" offer when a
-// game has ended; the final board stays on screen behind it.
+// renderGameOver drives two pieces of end-of-game UI from the same reducer
+// state: the prominent centered result card over a dimmed board, and the
+// below-board "new game / back to menu" offer. The final board stays on screen
+// behind the overlay. Both are hidden (and the board-dim class cleared) whenever
+// the game is not over, so returnToMenu and connection_lost reset cleanly via a
+// plain re-render. Headline text comes from the pure, tested endgameHeadline.
 function renderGameOver() {
-  if (!els.gameOver) return;
   const g = ui.game;
-  if (ui.phase !== PHASE.OVER || !g || !g.result) {
-    els.gameOver.hidden = true;
+  const over = ui.phase === PHASE.OVER && g && g.result;
+
+  if (!over) {
+    if (els.gameOver) els.gameOver.hidden = true;
+    if (els.gameOverOverlay) els.gameOverOverlay.hidden = true;
+    if (els.boardWrap) els.boardWrap.classList.remove('over');
     return;
   }
+
+  // Centered overlay card over the dimmed board.
+  const headline = endgameHeadline(g.result, g.myColor);
+  if (headline) {
+    if (els.gameOverTitle) els.gameOverTitle.textContent = headline.title;
+    if (els.gameOverDetail) els.gameOverDetail.textContent = headline.detail || '';
+    if (els.gameOverOverlay) els.gameOverOverlay.hidden = false;
+    if (els.boardWrap) els.boardWrap.classList.add('over');
+  }
+
+  // Below-board panel: result line + the New game button (unchanged behavior).
   const outcome = playerOutcome(g.result, g.myColor);
-  const headline = outcome === 'win' ? 'You win' : outcome === 'loss' ? 'You lose' : 'Draw';
+  const text = outcome === 'win' ? 'You win' : outcome === 'loss' ? 'You lose' : 'Draw';
   const reason = g.result.reason ? ` (${g.result.reason})` : '';
-  if (els.gameOverText) els.gameOverText.textContent = `${headline}${reason}`;
-  els.gameOver.hidden = false;
+  if (els.gameOverText) els.gameOverText.textContent = `${text}${reason}`;
+  if (els.gameOver) els.gameOver.hidden = false;
 }
 
 let toastTimer = null;

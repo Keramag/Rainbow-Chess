@@ -246,16 +246,16 @@ existing **New game** button below the board.
 
 Drive the new overlay from existing reducer state; toggle the board-dim class.
 
-- [ ] cache the new elements (`gameOverOverlay`, `gameOverTitle`,
+- [x] cache the new elements (`gameOverOverlay`, `gameOverTitle`,
       `gameOverDetail`, `boardWrap`) in the `els` map.
-- [ ] in `renderGameOver()`: when `ui.phase === PHASE.OVER` and `ui.game.result`,
+- [x] in `renderGameOver()`: when `ui.phase === PHASE.OVER` and `ui.game.result`,
       compute `endgameHeadline(g.result, g.myColor)`, fill title/detail, show the
       overlay, and add the `over` class to `.board-wrap`; otherwise hide the
       overlay and remove the class. Keep the existing below-board `#game-over`
       panel (New game button) behavior intact.
-- [ ] ensure `returnToMenu` (New game) and the `connection_lost` path both clear
+- [x] ensure `returnToMenu` (New game) and the `connection_lost` path both clear
       the overlay and the board-dim class (re-render covers this).
-- [ ] tests: DOM glue (not unit-tested); rely on Task 4 coverage of
+- [x] tests: DOM glue (not unit-tested); rely on Task 4 coverage of
       `endgameHeadline`. Re-run `make test` — must pass before Task 7.
 
 ### Task 7: Verify acceptance criteria
