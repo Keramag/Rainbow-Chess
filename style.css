@@ -216,8 +216,10 @@ button.primary {
   pointer-events: none;
 }
 
-/* Centered result card ("Checkmate — You win" etc.). Hidden by default (the
-   [hidden] attribute wins over display); app.js reveals it on game end. */
+/* Centered result card ("Checkmate — You win" etc.). This rule sets no display,
+   so the UA `[hidden] { display: none }` keeps it hidden by default; app.js
+   reveals it on game end. (Adding a `display` here would need an explicit
+   `[hidden]` reset to stay hidden.) */
 .game-over-overlay {
   position: absolute;
   left: 50%;

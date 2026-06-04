@@ -266,10 +266,12 @@ client
   })
   .on('opponent_disconnected', (msg) => {
     dispatch(msg);
-    // A terminal result rides on the disconnect message; classify it the same
-    // way so the remaining player hears the right win/lose/draw game-end cue
-    // rather than a move sound.
-    const event = eventForUpdate({ result: msg.result, myColor: board.orientation });
+    // The reducer resolves the terminal result (the remaining player wins even
+    // if the wire omitted one), so classify from that single source of truth —
+    // the cue then always matches the on-screen result rather than risking a
+    // silent cue under a screen that already says "you win".
+    const result = ui.game ? ui.game.result : msg.result;
+    const event = eventForUpdate({ result, myColor: board.orientation });
     if (event) audio.playEvent(event);
   })
   .on('error', (msg) => dispatch(msg));

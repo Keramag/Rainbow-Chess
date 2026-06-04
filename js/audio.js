@@ -103,14 +103,16 @@ export class AudioPlayer {
 
     let t = ctx.currentTime;
     for (const step of spec.steps) {
-      const dur = Math.max(0, (step.ms || 0) / 1000);
+      // Floor the tone at attack+release so the envelope below always ramps
+      // monotonically — a tone shorter than the attack would otherwise schedule
+      // the hold after the release. Every real spec step is far longer.
+      const dur = Math.max(ATTACK_S + RELEASE_S, (step.ms || 0) / 1000);
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = step.type || 'sine';
       osc.frequency.value = step.freq || 440;
 
-      // Linear attack up to peak, hold, then linear release back to silence. The
-      // hold-end is clamped so very short tones still ramp monotonically.
+      // Linear attack up to peak, hold, then linear release back to silence.
       const holdEnd = t + Math.max(ATTACK_S, dur - RELEASE_S);
       gain.gain.setValueAtTime(0, t);
       gain.gain.linearRampToValueAtTime(PEAK_GAIN, t + ATTACK_S);
