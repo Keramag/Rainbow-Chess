@@ -34,7 +34,16 @@
         <h2>Game</h2>
         <div id="game-area" class="game-area" hidden>
           <div id="game-info" class="game-info"></div>
-          <div id="board-root" class="board-root"></div>
+          <!-- The board plus a centered result card shown over it on game end.
+               .board-wrap is the positioning context; the overlay sits absolutely
+               centered over (and dims) #board-root while the game is over. -->
+          <div class="board-wrap">
+            <div id="board-root" class="board-root"></div>
+            <div id="game-over-overlay" class="game-over-overlay" hidden>
+              <p id="game-over-title" class="game-over-title"></p>
+              <p id="game-over-detail" class="game-over-detail"></p>
+            </div>
+          </div>
           <div class="game-controls">
             <button id="resign-btn">Resign</button>
           </div>

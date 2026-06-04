@@ -225,22 +225,22 @@ inline in DOM glue.
 Add the centered result card over the board and dim the board behind it. Keep the
 existing **New game** button below the board.
 
-- [ ] in `index.html`, wrap `#board-root` in a `.board-wrap` (positioning
+- [x] in `index.html`, wrap `#board-root` in a `.board-wrap` (positioning
       context) and add a sibling `#game-over-overlay` card inside it containing
       `#game-over-title` and `#game-over-detail`; leave the existing `#game-over`
       panel below the board as the **New game** action (its `#back-to-menu`
       button + wiring are unchanged).
-- [ ] in `style.css`, style `.board-wrap { position: relative }`,
+- [x] in `style.css`, style `.board-wrap { position: relative }`,
       `#game-over-overlay` as an absolutely-centered card (readable contrast,
       rounded, drop shadow) hidden by default, and dim the board when over
       (e.g. `.board-wrap.over #board-root { opacity: .45 }` plus
       `pointer-events: none` so the dead board can't be clicked).
-- [ ] ensure the overlay does not break the existing board banner `over` tone or
+- [x] ensure the overlay does not break the existing board banner `over` tone or
       the below `#game-over` panel layout.
-- [ ] tests: HTML/CSS only — no unit tests apply; the gating logic lives in the
+- [x] tests: HTML/CSS only — no unit tests apply; the gating logic lives in the
       tested `endgameHeadline`/reducer. Add a one-line note in the plan's
       Post-Completion for manual visual check.
-- [ ] run `make test` — must stay green before Task 6.
+- [x] run `make test` — must stay green before Task 6.
 
 ### Task 6: Render the overlay (`js/app.js` `renderGameOver()`)
 
@@ -343,6 +343,10 @@ comes from the pure, tested `endgameHeadline`.
 - Confirm the centered result card renders over the dimmed board with the right
   headline (win/loss/draw + reason), the board can't be clicked while over, and
   **New game** clears the overlay and returns to the menu.
+- Visual check (Task 5, HTML/CSS only): the `#game-over-overlay` card is centered
+  over `#board-root` within `.board-wrap`, the board dims (`opacity: .45` +
+  `pointer-events: none`) only when `.board-wrap.over` is set, and the below-board
+  `#game-over` New-game panel keeps its existing layout.
 
 **Optional follow-ups (out of scope this iteration):**
 

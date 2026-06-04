@@ -201,6 +201,52 @@ button.primary {
   display: inline-block;
 }
 
+/* The board and its end-of-game overlay share a positioning context. align-self
+   keeps the wrap shrink-wrapped to the board (it's a flex item of .game-area)
+   so the absolutely-centered overlay lands over the board, not the panel. */
+.board-wrap {
+  position: relative;
+  align-self: start;
+}
+
+/* While the game is over, dim the final board and stop it taking clicks; the
+   result card sits on top and the New game action stays in the panel below. */
+.board-wrap.over #board-root {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* Centered result card ("Checkmate — You win" etc.). Hidden by default (the
+   [hidden] attribute wins over display); app.js reveals it on game end. */
+.game-over-overlay {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 220px;
+  max-width: 90%;
+  padding: 22px 28px;
+  text-align: center;
+  background: var(--panel-2);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
+  z-index: 6;
+}
+
+.game-over-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.game-over-detail {
+  margin: 8px 0 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
 /* Status banner above the board (turn / check / result). */
 .board-banner {
   font-size: 0.95rem;
