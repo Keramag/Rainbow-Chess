@@ -59,10 +59,14 @@ There is **no lobby, no AI, and no accounts** — just anonymous 1v1 challenges.
    challenger plays **White**, the acceptor plays **Black**.
 5. Click a piece to see its legal moves highlighted, then click a target to move.
    Pawn promotions show a picker limited to the variant's allowed pieces
-   (Q/R/B/N for Standard, N/B for Rainbow).
+   (Q/R/B/N for Standard, N/B for Rainbow). Moves, captures, and checks each play
+   a short synthesized sound (Web Audio, no asset files); audio unlocks on your
+   first click/keypress per the browser autoplay policy.
 6. The game ends on checkmate (win), stalemate (draw), resignation, move-timeout
-   (auto-resign), or opponent disconnect. A game-over panel offers a return to
-   the menu for a fresh challenge.
+   (auto-resign), or opponent disconnect — each plays a game-end sound, and a
+   centered result card ("Checkmate — You win", "Stalemate — Draw", …) appears
+   over the dimmed board. A game-over panel below offers a return to the menu for
+   a fresh challenge.
 
 A challenge that is not accepted within 30 seconds expires.
 
@@ -219,6 +223,8 @@ js/
   multiplayer.js  MultiplayerClient WS wrapper (pure, DOM-free)
   variants.js     variant-list parsing for the picker
   board-model.js  FEN -> 8x8 model, coordinate mapping, highlight derivation
+  sound-events.js classify a server update into a sound event (pure, DOM-free)
+  audio.js        Web Audio AudioPlayer synth glue (no-op without AudioContext)
   chess.js        BoardView: DOM board render + click-to-move
   game-state.js   pure reducer for screen state (menu / playing / over)
   app.js          thin DOM glue wiring it all together

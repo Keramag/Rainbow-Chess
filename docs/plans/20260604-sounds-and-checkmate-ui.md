@@ -277,13 +277,13 @@ Drive the new overlay from existing reducer state; toggle the board-dim class.
 
 ### Task 8: [Final] Update documentation
 
-- [ ] update `README.md` if it enumerates client modules / behavior (add the
+- [x] update `README.md` if it enumerates client modules / behavior (add the
       sound + overlay note; no new run/build steps).
-- [ ] update `CLAUDE.md` rendering section (`js/`) to list `sound-events.js`
+- [x] update `CLAUDE.md` rendering section (`js/`) to list `sound-events.js`
       (pure) and `audio.js` (thin glue), reinforcing the
       pure-logic-vs-DOM-glue split, and note "client plays sounds derived only
       from server-authoritative fields; it still re-implements no rules."
-- [ ] document the move/capture/check/game-end sound decision and the
+- [x] document the move/capture/check/game-end sound decision and the
       "single sound per update, priority game-end > check > capture > move"
       rule under CLAUDE.md "Documented rule decisions" (or a short rendering
       note).
