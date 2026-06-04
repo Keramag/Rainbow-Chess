@@ -207,18 +207,18 @@ detection needs the pre-update FEN, which `BoardView` still holds before
 Give the overlay a tested, player-relative headline instead of computing strings
 inline in DOM glue.
 
-- [ ] add `endgameHeadline(result, myColor)` to `js/game-state.js` returning a
+- [x] add `endgameHeadline(result, myColor)` to `js/game-state.js` returning a
       structured `{ title, detail }` — e.g. `title` from the reason
       (`'Checkmate'` / `'Stalemate'` / `'Resignation'` / `'Timeout'` /
       `'Disconnected'`, title-cased; fallback to a generic `'Game over'`),
       `detail` from `playerOutcome` (`'You win'` / `'You lose'` / `'Draw'`).
-- [ ] reuse existing `isOver` / `playerOutcome`; return `null` when the result is
+- [x] reuse existing `isOver` / `playerOutcome`; return `null` when the result is
       not terminal.
-- [ ] write tests in `js/game-state.test.js` (success): checkmate as winner,
+- [x] write tests in `js/game-state.test.js` (success): checkmate as winner,
       checkmate as loser, stalemate→draw, resignation, timeout.
-- [ ] write tests (edge): unknown/empty reason → generic title; non-terminal /
+- [x] write tests (edge): unknown/empty reason → generic title; non-terminal /
       `null` result → `null`; correct relativity for both `myColor` values.
-- [ ] run `make test` — must pass before Task 5.
+- [x] run `make test` — must pass before Task 5.
 
 ### Task 5: End-of-game overlay markup + styles (`index.html`, `style.css`)
 

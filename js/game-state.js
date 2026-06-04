@@ -41,6 +41,39 @@ export function playerOutcome(result, myColor) {
   return whiteWon === iAmWhite ? 'win' : 'loss';
 }
 
+// ENDGAME_TITLES maps a server (or reducer-injected) result reason to a short,
+// title-cased headline for the end-of-game overlay. The wire sends
+// checkmate / stalemate / resignation / timeout / "opponent disconnected"
+// (backend/types.go); the reducer additionally injects "opponent left" and
+// "connection lost" for the disconnect paths — all of those collapse to a single
+// player-facing "Disconnected". Anything unrecognised falls back via the caller.
+const ENDGAME_TITLES = {
+  checkmate: 'Checkmate',
+  stalemate: 'Stalemate',
+  resignation: 'Resignation',
+  timeout: 'Timeout',
+  'opponent disconnected': 'Disconnected',
+  'opponent left': 'Disconnected',
+  'connection lost': 'Disconnected',
+};
+
+// ENDGAME_DETAIL renders the viewing player's outcome as a one-line subtitle.
+const ENDGAME_DETAIL = { win: 'You win', loss: 'You lose', draw: 'Draw' };
+
+// endgameHeadline turns a terminal result into the overlay's player-relative
+// headline { title, detail } — e.g. { title: 'Checkmate', detail: 'You win' }.
+// title comes from the reason (generic 'Game over' when the reason is unknown or
+// missing); detail comes from playerOutcome relative to myColor. Returns null
+// when the result is not terminal, so the overlay only ever shows on a real
+// ending. Pure: app.js renders this rather than building strings in DOM glue.
+export function endgameHeadline(result, myColor) {
+  if (!isOver(result)) return null;
+  const reason = typeof result.reason === 'string' ? result.reason.trim().toLowerCase() : '';
+  const title = ENDGAME_TITLES[reason] || 'Game over';
+  const detail = ENDGAME_DETAIL[playerOutcome(result, myColor)] || null;
+  return { title, detail };
+}
+
 // sideOf extracts the side to move from a FEN's second field, defaulting to
 // 'white' so a placement-only string still yields a sane value. Kept local so
 // the reducer has no import cycle with board-model.js.

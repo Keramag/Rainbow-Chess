@@ -12,6 +12,7 @@ import {
   initialState,
   isOver,
   playerOutcome,
+  endgameHeadline,
   reduce,
   returnToMenu,
   clearNotice,
@@ -261,6 +262,59 @@ test('playerOutcome maps results to the viewing player perspective', () => {
   assert.equal(playerOutcome({ outcome: 'black_wins' }, 'black'), 'win');
   assert.equal(playerOutcome({ outcome: 'black_wins' }, 'white'), 'loss');
   assert.equal(playerOutcome({ outcome: 'draw' }, 'white'), 'draw');
+});
+
+test('endgameHeadline gives a player-relative title+detail for each terminal reason', () => {
+  // Checkmate as the winner vs the loser (same result, opposite myColor).
+  assert.deepEqual(
+    endgameHeadline({ outcome: 'white_wins', reason: 'checkmate' }, 'white'),
+    { title: 'Checkmate', detail: 'You win' },
+  );
+  assert.deepEqual(
+    endgameHeadline({ outcome: 'white_wins', reason: 'checkmate' }, 'black'),
+    { title: 'Checkmate', detail: 'You lose' },
+  );
+
+  // Stalemate is a draw for both sides.
+  assert.deepEqual(
+    endgameHeadline({ outcome: 'draw', reason: 'stalemate' }, 'white'),
+    { title: 'Stalemate', detail: 'Draw' },
+  );
+
+  // Resignation / timeout title-case off their reason.
+  assert.deepEqual(
+    endgameHeadline({ outcome: 'black_wins', reason: 'resignation' }, 'black'),
+    { title: 'Resignation', detail: 'You win' },
+  );
+  assert.deepEqual(
+    endgameHeadline({ outcome: 'white_wins', reason: 'timeout' }, 'black'),
+    { title: 'Timeout', detail: 'You lose' },
+  );
+});
+
+test('endgameHeadline collapses every disconnect reason to a single Disconnected title', () => {
+  for (const reason of ['opponent disconnected', 'opponent left', 'connection lost']) {
+    assert.equal(
+      endgameHeadline({ outcome: 'white_wins', reason }, 'white').title,
+      'Disconnected',
+      `${reason} -> Disconnected`,
+    );
+  }
+});
+
+test('endgameHeadline falls back to a generic title for unknown/empty reasons', () => {
+  assert.equal(endgameHeadline({ outcome: 'draw', reason: 'mutual agreement' }, 'white').title, 'Game over');
+  assert.equal(endgameHeadline({ outcome: 'white_wins', reason: '' }, 'white').title, 'Game over');
+  assert.equal(endgameHeadline({ outcome: 'white_wins' }, 'white').title, 'Game over', 'missing reason -> generic');
+  // The detail still reflects the outcome even when the reason is unknown.
+  assert.equal(endgameHeadline({ outcome: 'white_wins' }, 'white').detail, 'You win');
+});
+
+test('endgameHeadline returns null for non-terminal or missing results', () => {
+  assert.equal(endgameHeadline(null, 'white'), null);
+  assert.equal(endgameHeadline(undefined, 'black'), null);
+  assert.equal(endgameHeadline({ outcome: 'ongoing' }, 'white'), null);
+  assert.equal(endgameHeadline({ outcome: '' }, 'white'), null);
 });
 
 test('challenge_declined / challenge_expired / error set a notice without touching the game', () => {
