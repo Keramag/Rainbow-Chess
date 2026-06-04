@@ -156,27 +156,27 @@ clear priority so a checkmating capture-with-check plays only the end sound.
 A thin, side-effecting wrapper that turns a synth spec into sound. Safe to import
 under Node (no `AudioContext`) so it never breaks the test runner.
 
-- [ ] create `js/audio.js` exporting an `AudioPlayer` class: lazily creates a
+- [x] create `js/audio.js` exporting an `AudioPlayer` class: lazily creates a
       single `AudioContext` on first use; `play(spec)` schedules each step as an
       oscillator → gain (short attack/release envelope to avoid clicks);
       `playEvent(eventName)` looks up `SOUND_SPECS[eventName]` and calls `play`.
-- [ ] guard for environments without Web Audio: if
+- [x] guard for environments without Web Audio: if
       `typeof AudioContext === 'undefined' && typeof webkitAudioContext ===
       'undefined'`, all methods no-op (so importing/constructing is safe in
       Node).
-- [ ] handle browser autoplay policy: expose `resume()` (calls
+- [x] handle browser autoplay policy: expose `resume()` (calls
       `AudioContext.resume()` if suspended) and `unlockOnFirstGesture(target)`
       that attaches a one-time `pointerdown`/`keydown` listener to create/resume
       the context after a user gesture; tolerate a missing/late context.
-- [ ] add a `muted` flag + `setMuted(bool)` so playback can be globally silenced
+- [x] add a `muted` flag + `setMuted(bool)` so playback can be globally silenced
       (wiring a UI toggle is out of scope; the flag keeps that cheap later).
-- [ ] write tests in `js/audio.js`-adjacent coverage where pure: since
+- [x] write tests in `js/audio.js`-adjacent coverage where pure: since
       `AudioContext` is absent under `node --test`, add a focused test asserting
       `new AudioPlayer()` constructs and `playEvent('move')` / `play(spec)` /
       `setMuted(true)` are **no-throw no-ops** in a non-browser environment
       (guards the Node-safety contract). Note in a comment that real playback is
       verified manually (Post-Completion).
-- [ ] run `make test` — must pass before Task 3.
+- [x] run `make test` — must pass before Task 3.
 
 ### Task 3: Wire sounds into the client (`js/app.js`)
 
