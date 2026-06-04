@@ -58,8 +58,9 @@ func TestRainbowRegisteredByInit(t *testing.T) {
 
 // checkSymmetry verifies the colour-symmetry invariant independently of the
 // engine's own validate(), so the test does not merely trust the code under
-// test: for every occupied square the file-mirror square must hold the opposite
-// colour.
+// test: for every occupied NON-ROYAL square the file-mirror square must hold the
+// opposite colour. Kings and queens are exempt — they keep their native colour,
+// so the central d/e pair on each back rank is intentionally same-side.
 func checkSymmetry(t *testing.T, pos *Position) {
 	t.Helper()
 	for y := int8(0); y < 8; y++ {
@@ -67,6 +68,9 @@ func checkSymmetry(t *testing.T, pos *Position) {
 			sq := Sq(int(x), int(y))
 			p := pos.PieceAt(sq)
 			if p.IsEmpty() {
+				continue
+			}
+			if p.Type == King || p.Type == Queen {
 				continue
 			}
 			msq := Sq(int(Mirror(x)), int(y))
@@ -229,25 +233,69 @@ func TestRainbowDeterministicPerSeed(t *testing.T) {
 
 // TestRainbowVariesAcrossSeeds confirms the colouring is actually random: many
 // seeds must yield more than one distinct position (otherwise the RNG is unused)
-// and must exercise both valid king arrangements (white on e1 and black on e1).
+// and a non-royal piece (the a1 rook) must take both colours across seeds. The
+// kings and queens no longer vary — they are native by design (see
+// TestRainbowNativeRoyalty) — so variety is asserted on a shuffled piece instead.
 func TestRainbowVariesAcrossSeeds(t *testing.T) {
 	r := NewRainbow()
 	seen := map[string]bool{}
-	whiteKingOnE1, blackKingOnE1 := false, false
-	e1 := Sq(4, 0)
+	whiteA1, blackA1 := false, false
+	a1 := Sq(0, 0)
 	for seed := int64(0); seed < 100; seed++ {
 		pos := r.buildInitialPosition(rand.New(rand.NewSource(seed)))
 		seen[pos.FEN()] = true
-		if pos.PieceAt(e1).Color == White {
-			whiteKingOnE1 = true
+		if pos.PieceAt(a1).Color == White {
+			whiteA1 = true
 		} else {
-			blackKingOnE1 = true
+			blackA1 = true
 		}
 	}
 	if len(seen) < 2 {
 		t.Errorf("expected varied positions across seeds, got %d distinct", len(seen))
 	}
-	if !whiteKingOnE1 || !blackKingOnE1 {
-		t.Errorf("expected both king arrangements across seeds; whiteKingOnE1=%v blackKingOnE1=%v", whiteKingOnE1, blackKingOnE1)
+	if !whiteA1 || !blackA1 {
+		t.Errorf("expected the a1 rook to take both colours across seeds; whiteA1=%v blackA1=%v", whiteA1, blackA1)
+	}
+}
+
+// TestRainbowNativeRoyalty locks in the rule that kings and queens are never
+// shuffled: across many seeds the white king/queen stay on e1/d1 as White and the
+// black king/queen stay on e8/d8 as Black. This is what keeps a king off an
+// enemy-coloured central pair and underpins the check-free start guarantee.
+func TestRainbowNativeRoyalty(t *testing.T) {
+	r := NewRainbow()
+	e1, d1 := Sq(4, 0), Sq(3, 0)
+	e8, d8 := Sq(4, 7), Sq(3, 7)
+	for seed := int64(0); seed < 200; seed++ {
+		pos := r.buildInitialPosition(rand.New(rand.NewSource(seed)))
+		if k := pos.PieceAt(e1); k.Type != King || k.Color != White {
+			t.Fatalf("seed %d: e1 = %+v, want white king", seed, k)
+		}
+		if q := pos.PieceAt(d1); q.Type != Queen || q.Color != White {
+			t.Fatalf("seed %d: d1 = %+v, want white queen", seed, q)
+		}
+		if k := pos.PieceAt(e8); k.Type != King || k.Color != Black {
+			t.Fatalf("seed %d: e8 = %+v, want black king", seed, k)
+		}
+		if q := pos.PieceAt(d8); q.Type != Queen || q.Color != Black {
+			t.Fatalf("seed %d: d8 = %+v, want black queen", seed, q)
+		}
+	}
+}
+
+// TestRainbowInitialPositionNoCheck locks in the new production guarantee: a
+// freshly dealt Rainbow game never starts with either king in check (and so never
+// begins already over). It drives the production path — which re-rolls until a
+// check-free colouring is found — many times.
+func TestRainbowInitialPositionNoCheck(t *testing.T) {
+	r := NewRainbow()
+	for i := 0; i < 500; i++ {
+		pos := r.InitialPosition()
+		if IsInCheck(pos, White) {
+			t.Fatalf("iteration %d: White starts in check (FEN %q)", i, pos.FEN())
+		}
+		if IsInCheck(pos, Black) {
+			t.Fatalf("iteration %d: Black starts in check (FEN %q)", i, pos.FEN())
+		}
 	}
 }

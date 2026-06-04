@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"time"
 
 	"rainbow-chess/engine"
@@ -65,9 +66,20 @@ type Hub struct {
 	// its final result recorded). It is nil by default — Task 10 wires it to the
 	// SQLite SaveGame path. It runs on the hub goroutine, so it must not block.
 	gameEnded func(*Game)
+
+	// coinFlip decides the colour assignment when a challenge is accepted: it
+	// returns true to swap the default (so the acceptor plays White instead of
+	// the challenger), giving each player a random colour from game to game.
+	// newHub seeds it with a time-based RNG (the production default); tests
+	// override it for a deterministic colour. It is only ever called on the hub
+	// goroutine, so the captured RNG needs no lock.
+	coinFlip func() bool
 }
 
 func newHub() *Hub {
+	// Each hub gets its own RNG, seeded from the wall clock, used only on the hub
+	// goroutine to randomise per-game colour assignment.
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	return &Hub{
 		clients:    make(map[*Client]bool),
 		users:      make(map[string]*User),
@@ -81,6 +93,8 @@ func newHub() *Hub {
 		challengeTTL:   defaultChallengeTTL,
 		expiryInterval: defaultExpiryInterval,
 		moveTimeout:    defaultMoveTimeout,
+
+		coinFlip: func() bool { return rng.Intn(2) == 1 },
 	}
 }
 
@@ -269,9 +283,9 @@ func (h *Hub) handleChallenge(from *User, msg *Message) {
 // handleAcceptChallenge turns a pending challenge into a live game. It revalidates
 // the variant and that both players are still free (either could have started a
 // game since the challenge was issued), creates the initial position via the
-// variant, fixes colors (challenger = White, acceptor = Black), marks both users
-// in-game, and sends each player a game_start carrying their color, the FEN, and
-// the side-to-move's legal moves.
+// variant, assigns colors with a coin flip (so a player isn't always White),
+// marks both users in-game, and sends each player a game_start carrying their
+// color, the FEN, and the side-to-move's legal moves.
 func (h *Hub) handleAcceptChallenge(user *User, msg *Message) {
 	challenge, ok := h.challenges[msg.ChallengeID]
 	if !ok {
@@ -304,20 +318,29 @@ func (h *Hub) handleAcceptChallenge(user *User, msg *Message) {
 		return
 	}
 
+	// Randomise colour so a player isn't always White: by default the challenger
+	// (from) is White and the acceptor (user) is Black, but a coin flip swaps
+	// them. Both players are told their colour on game_start, so nothing
+	// downstream depends on which physical connection got which side.
+	white, black := from, user
+	if h.coinFlip() {
+		white, black = user, from
+	}
+
 	gameID := uuid.New().String()
 	pos := variant.InitialPosition()
 	game := &Game{
 		ID:        gameID,
 		Variant:   challenge.Variant,
-		White:     from,
-		Black:     user,
+		White:     white,
+		Black:     black,
 		Position:  pos,
 		StartTime: time.Now(),
 	}
 	h.games[gameID] = game
 
-	from.InGame, from.GameID = true, gameID
-	user.InGame, user.GameID = true, gameID
+	white.InGame, white.GameID = true, gameID
+	black.InGame, black.GameID = true, gameID
 
 	fen := pos.FEN()
 	legal := movesToDTO(variant.LegalMoves(pos))
@@ -326,23 +349,23 @@ func (h *Hub) handleAcceptChallenge(user *User, msg *Message) {
 	// game_start carries the opponent's username so the client never has to
 	// remember whom it challenged/accepted — which would be ambiguous when a user
 	// has several outgoing challenges pending and any of them might accept first.
-	h.sendToUser(from, &Message{
+	h.sendToUser(white, &Message{
 		Type:         "game_start",
 		GameID:       gameID,
 		Variant:      challenge.Variant,
 		Color:        "white",
-		OpponentName: user.Username,
+		OpponentName: black.Username,
 		FEN:          fen,
 		SideToMove:   pos.SideToMove.String(),
 		InCheck:      inCheck,
 		LegalMoves:   legal,
 	})
-	h.sendToUser(user, &Message{
+	h.sendToUser(black, &Message{
 		Type:         "game_start",
 		GameID:       gameID,
 		Variant:      challenge.Variant,
 		Color:        "black",
-		OpponentName: from.Username,
+		OpponentName: white.Username,
 		FEN:          fen,
 		SideToMove:   pos.SideToMove.String(),
 		InCheck:      inCheck,
@@ -352,7 +375,7 @@ func (h *Hub) handleAcceptChallenge(user *User, msg *Message) {
 	h.broadcastUserList()
 	// The clock starts on White the moment the game begins.
 	h.startMoveTimer(game)
-	log.Printf("Game started: %s (white) vs %s (black) — %s [%s]", from.Username, user.Username, challenge.Variant, gameID)
+	log.Printf("Game started: %s (white) vs %s (black) — %s [%s]", white.Username, black.Username, challenge.Variant, gameID)
 }
 
 // handleDeclineChallenge removes a pending challenge at the target's request and

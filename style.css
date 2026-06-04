@@ -249,6 +249,40 @@ button.primary {
   color: var(--muted);
 }
 
+/* The victory pig: a big emoji that bounces in over the board on a win. Paired
+   with the synthesized donkey bray (sound-events.js). Hidden on loss/draw. */
+.game-over-pig {
+  font-size: 3.2rem;
+  line-height: 1;
+  margin-bottom: 6px;
+  transform-origin: bottom center;
+  animation: pig-bray 0.6s ease-in-out 3;
+}
+
+@keyframes pig-bray {
+  0% {
+    transform: scale(0.6) rotate(-8deg);
+  }
+  25% {
+    transform: scale(1.15) rotate(6deg);
+  }
+  50% {
+    transform: scale(0.95) rotate(-4deg);
+  }
+  75% {
+    transform: scale(1.08) rotate(4deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-over-pig {
+    animation: none;
+  }
+}
+
 /* Status banner above the board (turn / check / result). */
 .board-banner {
   font-size: 0.95rem;
@@ -298,6 +332,37 @@ button.primary {
 
 .square.dark {
   background: #5d6b87;
+}
+
+/* Edge coordinate labels: a small file letter in the bottom-right corner and a
+   rank number in the top-left corner of the edge squares. Tinted to the square
+   shade so they stay legible without competing with the pieces. */
+.coord {
+  position: absolute;
+  font-size: min(2vmin, 12px);
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+  opacity: 0.75;
+}
+
+.coord-rank {
+  top: 3px;
+  left: 4px;
+}
+
+.coord-file {
+  bottom: 3px;
+  right: 4px;
+}
+
+/* On dark squares use a light label; on light squares use a dark one. */
+.square.dark .coord {
+  color: #d7deee;
+}
+
+.square.light .coord {
+  color: #3a445c;
 }
 
 /* A single glyph shape per piece type; the side is conveyed purely by fill

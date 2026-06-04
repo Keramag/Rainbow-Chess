@@ -197,3 +197,17 @@ test('SOUND_SPECS has a recipe for every name in SOUND_EVENTS', () => {
     }
   }
 });
+
+test('the win cue is a multi-step sawtooth donkey bray', () => {
+  const win = SOUND_SPECS[SOUND_EVENTS.GAME_END_WIN];
+  // A bray sweeps up and down twice, so it has many steps (far more than the
+  // old 3-note arpeggio) and every step uses the buzzy sawtooth wave.
+  assert.ok(win.steps.length >= 12, `bray should have many steps, got ${win.steps.length}`);
+  for (const step of win.steps) {
+    assert.equal(step.type, 'sawtooth', 'every bray step is a sawtooth tone');
+    assert.ok(step.freq > 0, 'bray step has a positive frequency');
+  }
+  // It actually moves (not a flat tone): there is more than one distinct pitch.
+  const distinct = new Set(win.steps.map((s) => s.freq));
+  assert.ok(distinct.size > 3, 'bray should glide across several pitches');
+});

@@ -12,6 +12,7 @@ import {
   squareColor,
   sideToMoveFromFen,
   displaySquares,
+  edgeCoordinates,
   legalTargets,
   movableSquares,
   promotionOptions,
@@ -152,6 +153,31 @@ test('displaySquares flips the board for Black (rank 1 on top, h-file left)', ()
   assert.equal(sq[56].name, 'h8');
   assert.equal(sq[63].name, 'a8');
   // The player's own back rank sits at the bottom in both orientations.
+});
+
+test('edgeCoordinates labels the bottom row with files and left column with ranks (White)', () => {
+  const sq = displaySquares('white');
+  const by = (name) => sq.find((s) => s.name === name);
+  // a1 is the bottom-left corner: it carries both its file and rank.
+  assert.deepEqual(edgeCoordinates(by('a1')), { file: 'a', rank: '1' });
+  // h1 is the bottom-right corner: file only (not the left column).
+  assert.deepEqual(edgeCoordinates(by('h1')), { file: 'h', rank: null });
+  // a8 is the top-left corner: rank only (not the bottom row).
+  assert.deepEqual(edgeCoordinates(by('a8')), { file: null, rank: '8' });
+  // An interior square carries no edge labels.
+  assert.deepEqual(edgeCoordinates(by('d4')), { file: null, rank: null });
+});
+
+test('edgeCoordinates follows the flip for Black (bottom-left is h8)', () => {
+  const sq = displaySquares('black');
+  const bottomLeft = sq.find((s) => s.row === 7 && s.col === 0);
+  assert.equal(bottomLeft.name, 'h8');
+  assert.deepEqual(edgeCoordinates(bottomLeft), { file: 'h', rank: '8' });
+});
+
+test('edgeCoordinates tolerates a malformed square', () => {
+  assert.deepEqual(edgeCoordinates(), { file: null, rank: null });
+  assert.deepEqual(edgeCoordinates({}), { file: null, rank: null });
 });
 
 test('legalTargets derives highlight destinations from the move list', () => {

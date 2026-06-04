@@ -156,6 +156,24 @@ export function displaySquares(orientation = 'white') {
   return squares;
 }
 
+// edgeCoordinates returns the rank/file labels a display square should carry:
+// the file letter (a-h) on the bottom row and the rank number (1-8) on the left
+// column, so the board shows coordinates along its edges. The file/rank already
+// account for board flip (they come from displaySquares), so the labels are
+// always correct for the viewing player — with White at the bottom the
+// bottom-left square is a1 (dark), which shows both 'a' and '1'. A square not on
+// either edge returns nulls. Defensive against a malformed input so the renderer
+// never throws over a label.
+export function edgeCoordinates(square = {}) {
+  const { row, col, file, rank } = square;
+  const onBottom = row === 7 && Number.isInteger(file) && file >= 0 && file <= 7;
+  const onLeft = col === 0 && Number.isInteger(rank) && rank >= 0 && rank <= 7;
+  return {
+    file: onBottom ? String.fromCharCode(97 + file) : null,
+    rank: onLeft ? String(rank + 1) : null,
+  };
+}
+
 // legalTargets returns the unique destination squares reachable from `from`
 // given the server's legal-move list. Used to highlight where a selected piece
 // may go. Order follows first appearance in the list.

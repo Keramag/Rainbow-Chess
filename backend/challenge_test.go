@@ -31,8 +31,12 @@ func send(h *Hub, c *Client, msg *Message) {
 // TestChallengeLifecycle_AcceptCreatesGame walks the happy path: a challenge is
 // created, the target is notified, and accepting it spins up a game with the
 // correct variant, colors, initial FEN, and legal-move list for both players.
+// Colour assignment is randomised in production, so this test pins the coin flip
+// to its default (challenger = White) to make the per-colour assertions concrete;
+// TestChallengeAccept_RandomizesColor covers the swapped assignment.
 func TestChallengeLifecycle_AcceptCreatesGame(t *testing.T) {
 	h := newHub()
+	h.coinFlip = func() bool { return false } // deterministic: challenger plays White
 	go h.run()
 
 	c1, id1 := connectClient(t, h)
@@ -100,6 +104,42 @@ func TestChallengeLifecycle_AcceptCreatesGame(t *testing.T) {
 				t.Errorf("user %q should be in-game after game_start", u.Username)
 			}
 		}
+	}
+}
+
+// TestChallengeAccept_RandomizesColor confirms colour assignment honours the coin
+// flip: when it returns true the colours swap, so the acceptor plays White and
+// the challenger plays Black. The default path (challenger White) is covered by
+// TestChallengeLifecycle_AcceptCreatesGame.
+func TestChallengeAccept_RandomizesColor(t *testing.T) {
+	h := newHub()
+	h.coinFlip = func() bool { return true } // force a swap: acceptor plays White
+	go h.run()
+
+	c1, _ := connectClient(t, h)   // challenger
+	c2, id2 := connectClient(t, h) // acceptor
+
+	send(h, c1, &Message{Type: "challenge", TargetUserID: id2, Variant: "standard"})
+	recv := waitForMessage(t, c2, "challenge_received")
+	if recv == nil {
+		return
+	}
+	send(h, c2, &Message{Type: "accept_challenge", ChallengeID: recv.ChallengeID})
+
+	challengerStart := waitForMessage(t, c1, "game_start")
+	acceptorStart := waitForMessage(t, c2, "game_start")
+	if challengerStart == nil || acceptorStart == nil {
+		return
+	}
+	if challengerStart.Color != "black" {
+		t.Errorf("challenger color = %q, want black (colours swapped)", challengerStart.Color)
+	}
+	if acceptorStart.Color != "white" {
+		t.Errorf("acceptor color = %q, want white (colours swapped)", acceptorStart.Color)
+	}
+	// Each player's opponent name is the other player, regardless of colour.
+	if acceptorStart.OpponentName == "" || challengerStart.OpponentName == "" {
+		t.Error("game_start missing opponent name")
 	}
 }
 

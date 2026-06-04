@@ -13,8 +13,10 @@ import (
 // disconnect) plus the persistence hook that fires on game end.
 
 // startGame connects two clients, has the first challenge the second under the
-// given variant, accepts it, and returns both clients (white = challenger,
-// black = acceptor) and the game id. Both game_start messages are consumed.
+// given variant, accepts it, and returns the clients mapped to the colours the
+// server actually assigned (colour is now randomised per game), plus the game id.
+// Both game_start messages are consumed. Returning by colour rather than by who
+// challenged keeps every move-driving test correct regardless of the coin flip.
 func startGame(t *testing.T, h *Hub, variant string) (white, black *Client, gameID string) {
 	t.Helper()
 	c1, _ := connectClient(t, h)
@@ -27,12 +29,18 @@ func startGame(t *testing.T, h *Hub, variant string) (white, black *Client, game
 	}
 	send(h, c2, &Message{Type: "accept_challenge", ChallengeID: recv.ChallengeID})
 
-	ws := waitForMessage(t, c1, "game_start")
-	waitForMessage(t, c2, "game_start")
-	if ws == nil {
+	gs1 := waitForMessage(t, c1, "game_start")
+	gs2 := waitForMessage(t, c2, "game_start")
+	if gs1 == nil || gs2 == nil {
 		return c1, c2, ""
 	}
-	return c1, c2, ws.GameID
+	// Map each connection to its assigned colour so callers can drive White and
+	// Black correctly no matter which side the coin flip handed to the challenger.
+	white, black = c1, c2
+	if gs1.Color == "black" {
+		white, black = c2, c1
+	}
+	return white, black, gs1.GameID
 }
 
 // move sends a {from,to} move from mover and returns the game_update mover

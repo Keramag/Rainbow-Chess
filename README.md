@@ -166,14 +166,21 @@ transport layer and the frontend need no changes.
   Standard generator serve Rainbow.
 - **Rainbow inherits castling and en passant unchanged** from Standard; only the
   initial colouring and the promotion whitelist differ.
-- **Both Rainbow kings start in check.** Symmetric colouring of the dense
-  standard layout always leaves both kings attacked on move one — a structural
-  property, not a bug. The side to move simply answers the check. Rainbow re-rolls
-  the colouring only when White (always the side to move) would have no legal
-  reply, so a game never starts already lost.
+- **Rainbow keeps each side's king and queen native, and no king starts in
+  check.** The colouring shuffles every piece in symmetric mirror pairs except the
+  kings and queens, which keep their native colour (white king/queen on rank 1,
+  black on rank 8). Rainbow re-rolls the colouring until neither king is attacked,
+  so a game never begins in check or already over.
+- **Your colour is randomised each game.** Accepting a challenge flips a coin for
+  who plays White, so you won't always be the same colour.
+- **The board has coordinates** — file letters along the bottom and rank numbers
+  down the left edge (a1 is a dark square, as in standard chess), flipped to match
+  whichever side you're playing.
 - **Draw detection is limited to stalemate** this iteration. Draw by repetition,
   the 50-move rule, and insufficient material are out of scope and can be a later
   iteration. Checkmate is a win; stalemate is a draw.
+- **Winning is celebrated with a pig that brays like a donkey** — on a win a 🐷
+  pops up over the board and the victory sound is a synthesized donkey "hee-haw".
 
 ## WebSocket protocol (server-authoritative)
 

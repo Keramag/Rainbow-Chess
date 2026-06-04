@@ -25,11 +25,35 @@ export const SOUND_EVENTS = {
   GAME_END_DRAW: 'gameEndDraw',
 };
 
+// donkeyBray builds a comedic "hee-haw" entirely from sawtooth steps that sweep
+// up then crash down, twice — a synthesised approximation of a braying donkey
+// (no audio asset, in keeping with the Web-Audio-only sound design). It is the
+// victory cue: when you win, a pig pops up in the end-of-game overlay and brays
+// like a donkey (see app.js). A real recorded bray would sound better but would
+// need a served audio file and a backend static-whitelist change; this keeps the
+// no-assets contract.
+function donkeyBray() {
+  const steps = [];
+  // sweep pushes n stepped tones gliding from `from` to `to` Hz, each `ms` long.
+  const sweep = (from, to, n, ms) => {
+    for (let i = 0; i < n; i++) {
+      const freq = n === 1 ? from : from + ((to - from) * i) / (n - 1);
+      steps.push({ freq: Math.round(freq), ms, type: 'sawtooth' });
+    }
+  };
+  for (let bray = 0; bray < 2; bray++) {
+    sweep(250, 540, 5, 30); // "hee" — a quick rise
+    sweep(540, 170, 7, 45); // "haw" — a longer, heavier fall
+    steps.push({ freq: 150, ms: 70, type: 'sawtooth' }); // settle before the next bray
+  }
+  return { steps };
+}
+
 // SOUND_SPECS maps each event name to a synth recipe: an ordered list of tone
 // `steps`, each `{ freq (Hz), ms (duration), type (oscillator wave) }`. Single
-// tones for the everyday cues (distinct pitches so they are told apart); short
-// arpeggios for game end — rising for a win, descending for a loss/draw. All the
-// tunable constants live here so the palette can be adjusted in one place.
+// tones for the everyday cues (distinct pitches so they are told apart); a
+// descending arpeggio for a loss/draw, and a synthesised donkey bray for a win.
+// All the tunable constants live here so the palette can be adjusted in one place.
 export const SOUND_SPECS = {
   // A soft mid sine — the quiet, common case.
   [SOUND_EVENTS.MOVE]: { steps: [{ freq: 440, ms: 90, type: 'sine' }] },
@@ -37,14 +61,8 @@ export const SOUND_SPECS = {
   [SOUND_EVENTS.CAPTURE]: { steps: [{ freq: 660, ms: 110, type: 'triangle' }] },
   // A tense high square to flag check.
   [SOUND_EVENTS.CHECK]: { steps: [{ freq: 880, ms: 140, type: 'square' }] },
-  // Rising major arpeggio — victory.
-  [SOUND_EVENTS.GAME_END_WIN]: {
-    steps: [
-      { freq: 523.25, ms: 130, type: 'sine' }, // C5
-      { freq: 659.25, ms: 130, type: 'sine' }, // E5
-      { freq: 783.99, ms: 220, type: 'sine' }, // G5
-    ],
-  },
+  // Victory: a synthesised donkey bray (paired with the pig in the win overlay).
+  [SOUND_EVENTS.GAME_END_WIN]: donkeyBray(),
   // Descending minor arpeggio — defeat.
   [SOUND_EVENTS.GAME_END_LOSS]: {
     steps: [

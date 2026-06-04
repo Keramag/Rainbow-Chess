@@ -33,6 +33,7 @@ const els = {
   boardWrap: document.querySelector('.board-wrap'),
   boardRoot: $('board-root'),
   gameOverOverlay: $('game-over-overlay'),
+  gameOverPig: $('game-over-pig'),
   gameOverTitle: $('game-over-title'),
   gameOverDetail: $('game-over-detail'),
   resignBtn: $('resign-btn'),
@@ -181,6 +182,7 @@ function renderGameOver() {
   if (!over) {
     if (els.gameOver) els.gameOver.hidden = true;
     if (els.gameOverOverlay) els.gameOverOverlay.hidden = true;
+    if (els.gameOverPig) els.gameOverPig.hidden = true;
     if (els.boardWrap) els.boardWrap.classList.remove('over');
     return;
   }
@@ -196,6 +198,8 @@ function renderGameOver() {
 
   // Below-board panel: result line + the New game button (unchanged behavior).
   const outcome = playerOutcome(g.result, g.myColor);
+  // The pig only celebrates a win; it brays via the win sound cue (sound-events).
+  if (els.gameOverPig) els.gameOverPig.hidden = outcome !== 'win';
   const text = outcome === 'win' ? 'You win' : outcome === 'loss' ? 'You lose' : 'Draw';
   const reason = g.result.reason ? ` (${g.result.reason})` : '';
   if (els.gameOverText) els.gameOverText.textContent = `${text}${reason}`;

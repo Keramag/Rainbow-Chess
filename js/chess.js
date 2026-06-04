@@ -17,6 +17,7 @@
 import {
   parseBoard,
   displaySquares,
+  edgeCoordinates,
   legalTargets,
   movableSquares,
   promotionOptions,
@@ -265,6 +266,23 @@ export class BoardView {
 
       if (targets.includes(sq.name)) {
         cell.classList.add(piece ? 'capture-target' : 'move-target');
+      }
+
+      // Edge coordinates: file letters along the bottom row, rank numbers down
+      // the left column (oriented for the viewing player). The corner square
+      // carries both. Tinted by square colour so they read on either shade.
+      const labels = edgeCoordinates(sq);
+      if (labels.rank) {
+        const r = document.createElement('span');
+        r.className = 'coord coord-rank';
+        r.textContent = labels.rank;
+        cell.appendChild(r);
+      }
+      if (labels.file) {
+        const f = document.createElement('span');
+        f.className = 'coord coord-file';
+        f.textContent = labels.file;
+        cell.appendChild(f);
       }
 
       this.boardEl.appendChild(cell);
