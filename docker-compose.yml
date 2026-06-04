@@ -5,7 +5,7 @@ services:
   rainbow-chess:
     # ghcr.io/<owner>/<repo>:<tag>. Owner = the GitHub repo owner (Keramag,
     # lowercased for GHCR); CI rewrites this line on the `deploy` branch.
-    image: ghcr.io/keramag/rainbow-chess:${GIT_SHA:-latest}
+    image: ghcr.io/keramag/rainbow-chess:baa48f28daf164e2c94d9c86e3627b253d15243e
     container_name: rainbow-chess
     networks:
       - rainbow-chess-network
