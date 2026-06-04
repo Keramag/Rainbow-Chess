@@ -13,6 +13,8 @@ import { MultiplayerClient } from './multiplayer.js';
 import { populateVariantPicker, variantLabel } from './variants.js';
 import { BoardView } from './chess.js';
 import { PHASE, initialState, reduce, returnToMenu, clearNotice, playerOutcome } from './game-state.js';
+import { eventForUpdate } from './sound-events.js';
+import { AudioPlayer } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -38,6 +40,13 @@ const els = {
 };
 
 const client = new MultiplayerClient();
+
+// One shared AudioPlayer turns the pure sound-event classification into actual
+// Web Audio cues. It no-ops entirely under Node/tests (no AudioContext) and is
+// unlocked on the first user gesture below to satisfy the browser autoplay
+// policy. All "which sound" decisions live in the pure sound-events module; this
+// file only fires the chosen cue at the two authoritative update points.
+const audio = new AudioPlayer();
 
 // ui is the high-level screen state, owned by the pure reducer. dispatch() is
 // the single place server (and local) events fold into it before a re-render.
@@ -218,10 +227,29 @@ client
     dispatch(msg);
   })
   .on('game_update', (msg) => {
+    // Capture detection compares piece counts across the move, so grab the FEN
+    // the board still holds *before* update overwrites it. myColor is the
+    // board's orientation (the viewing player's colour).
+    const prevFen = board.fen;
     board.update(msg);
     dispatch(msg);
+    const event = eventForUpdate({
+      prevFen,
+      fen: msg.fen,
+      inCheck: msg.inCheck,
+      result: msg.result,
+      myColor: board.orientation,
+    });
+    if (event) audio.playEvent(event);
   })
-  .on('opponent_disconnected', (msg) => dispatch(msg))
+  .on('opponent_disconnected', (msg) => {
+    dispatch(msg);
+    // A terminal result rides on the disconnect message; classify it the same
+    // way so the remaining player hears the right win/lose/draw game-end cue
+    // rather than a move sound.
+    const event = eventForUpdate({ result: msg.result, myColor: board.orientation });
+    if (event) audio.playEvent(event);
+  })
   .on('error', (msg) => dispatch(msg));
 
 if (els.acceptBtn) {
@@ -258,6 +286,11 @@ const commitEl = $('commit-sha');
 if (commitEl && commitEl.textContent.includes('__COMMIT_SHA__')) {
   commitEl.textContent = 'Commit: dev';
 }
+
+// Unlock audio on the first user gesture (challenge, accept, or board click) so
+// the browser's autoplay policy doesn't swallow the first cue. No-op when Web
+// Audio is unavailable.
+audio.unlockOnFirstGesture(document);
 
 setStatus(false);
 renderUI();

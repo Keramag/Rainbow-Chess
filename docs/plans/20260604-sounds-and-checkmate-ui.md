@@ -184,20 +184,20 @@ Play the classified sound from the single authoritative update points. Capture
 detection needs the pre-update FEN, which `BoardView` still holds before
 `board.update(msg)` overwrites it.
 
-- [ ] construct a single `AudioPlayer` in `app.js`; call
+- [x] construct a single `AudioPlayer` in `app.js`; call
       `audio.unlockOnFirstGesture(document)` once at startup so the first
       challenge/accept/board click unlocks audio.
-- [ ] in the `game_update` handler: read `const prevFen = board.fen` **before**
+- [x] in the `game_update` handler: read `const prevFen = board.fen` **before**
       `board.update(msg)`, then after dispatch call
       `audio.playEvent(eventForUpdate({ prevFen, fen: msg.fen, inCheck:
       msg.inCheck, result: msg.result, myColor: board.orientation }))`
       (guard the `null` event).
-- [ ] in the `opponent_disconnected` handler: play the game-end event
+- [x] in the `opponent_disconnected` handler: play the game-end event
       (terminal `result` is present on the message; classify with the same
       helper so win/lose/draw is correct).
-- [ ] do **not** play a sound on `game_start` (opening position is not a move);
+- [x] do **not** play a sound on `game_start` (opening position is not a move);
       confirm no other handler emits spurious sounds.
-- [ ] write/extend tests: this wiring is DOM glue (not unit-tested directly), so
+- [x] write/extend tests: this wiring is DOM glue (not unit-tested directly), so
       ensure the *logic* it calls is fully covered by Task 1 tests; add any
       missing `eventForUpdate` case discovered while wiring. Re-run
       `make test` — must pass before Task 4.
