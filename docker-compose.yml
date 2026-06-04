@@ -14,6 +14,14 @@ services:
       - "traefik.http.routers.rainbow-chess.rule=Host(`${HOSTNAME}`)"
       - "traefik.http.routers.rainbow-chess.entrypoints=websecure"
       - "traefik.http.routers.rainbow-chess.tls.certresolver=myresolver"
+      # Plain-HTTP router on :80 that redirects to HTTPS. Without this, typing the
+      # bare domain (browser defaults to http://) hits Traefik with no web-entrypoint
+      # route and gets a 404 — the HTTPS site only loads if you type https:// first.
+      - "traefik.http.routers.rainbow-chess-http.rule=Host(`${HOSTNAME}`)"
+      - "traefik.http.routers.rainbow-chess-http.entrypoints=web"
+      - "traefik.http.routers.rainbow-chess-http.middlewares=rainbow-chess-redirect"
+      - "traefik.http.middlewares.rainbow-chess-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.rainbow-chess-redirect.redirectscheme.permanent=true"
       # Route to the server's HTTP/WebSocket port.
       - "traefik.http.services.rainbow-chess.loadbalancer.server.port=8080"
       # WebSocket upgrade: forward the Connection/Upgrade headers so /ws works.
